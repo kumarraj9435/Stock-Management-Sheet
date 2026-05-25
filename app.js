@@ -296,11 +296,29 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
 
     let imported = 0;
     pendingUploadData.forEach(row => {
-        const sku = row['SKU'] || row['sku'] || row['Sku'] || row['SKU Code'] || '';
-        const name = row['Product Name'] || row['product_name'] || row['Name'] || row['name'] || row['Product'] || '';
-        const category = row['Category'] || row['category'] || row['Cat'] || '';
-        const quantity = parseInt(row['Quantity'] || row['quantity'] || row['Qty'] || row['qty'] || 0);
-        const price = parseFloat(row['Unit Price'] || row['unit_price'] || row['Price'] || row['price'] || 0);
+        // Case-insensitive column matching helper
+        function getVal(row, keys) {
+            // First try exact match
+            for (const key of keys) {
+                if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+            }
+            // Then try case-insensitive match on all row keys
+            const rowKeys = Object.keys(row);
+            for (const key of keys) {
+                const found = rowKeys.find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
+                if (found && row[found] !== undefined && row[found] !== null && row[found] !== '') return row[found];
+            }
+            return '';
+        }
+
+        const sku = getVal(row, ['SKU', 'sku', 'Sku', 'SKU Code', 'sku_code', 'Item Code', 'item_code', 'Code']);
+        const name = getVal(row, ['Product Name', 'product_name', 'Name', 'name', 'Product', 'Item', 'Item Name', 'item_name', 'Description']);
+        const category = getVal(row, ['Category', 'category', 'Cat', 'Type', 'Group']);
+        const rawQty = getVal(row, ['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'Stock', 'stock', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'Count']);
+        const rawPrice = getVal(row, ['Unit Price', 'unit_price', 'Price', 'price', 'Rate', 'rate', 'MRP', 'mrp', 'Cost', 'cost', 'Unit Cost']);
+
+        const quantity = parseInt(rawQty) || 0;
+        const price = parseFloat(rawPrice) || 0;
 
         if (sku && name) {
             const existing = StockManager.items.find(i => i.sku === sku);
@@ -319,7 +337,7 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
     StockManager.save();
     pendingUploadData = null;
     document.getElementById('upload-preview').classList.add('hidden');
-    showToast(`Imported ${imported} items!`, 'success');
+    showToast(`Imported ${imported} items (with quantities)!`, 'success');
     renderSummary();
 });
 
