@@ -334,7 +334,27 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
         const category = String(getVal(['Category', 'category', 'Cat', 'Type', 'Group', 'group', 'Section'])).trim();
         
         // Quantity - try all possible column names
-        let rawQty = getVal(['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'QUANTITY', 'Stock', 'stock', 'STOCK', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'units', 'Count', 'count', 'Pcs', 'pcs', 'Nos', 'nos', 'Available', 'available', 'Balance', 'balance', 'In Hand', 'On Hand']);
+        let rawQty = getVal(['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'QUANTITY', 'Stock', 'stock', 'STOCK', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'units', 'Count', 'count', 'Pcs', 'pcs', 'Nos', 'nos', 'Available', 'available', 'Balance', 'balance', 'In Hand', 'On Hand', 'Opening', 'opening']);
+        
+        // If still not found, try to find any numeric column that's not price/sku
+        if (rawQty === '') {
+            const priceKeys = ['Unit Price', 'unit_price', 'Price', 'price', 'Rate', 'rate', 'MRP', 'mrp', 'Cost', 'cost'];
+            const skipKeys = [...priceKeys, 'Sr', 'sr', 'S.No', 'S.no', 'No', 'no', 'Sr.', 'sr.', 'Sl', 'sl'];
+            for (const key of rowKeys) {
+                const val = row[key];
+                const keyLower = key.toLowerCase().trim();
+                // Skip if it's a known non-qty field
+                if (skipKeys.some(s => keyLower === s.toLowerCase())) continue;
+                // Skip SKU and Name columns
+                if (keyLower.includes('sku') || keyLower.includes('name') || keyLower.includes('product') || keyLower.includes('category') || keyLower.includes('price') || keyLower.includes('rate') || keyLower.includes('mrp') || keyLower.includes('cost') || keyLower.includes('description') || keyLower.includes('code')) continue;
+                // Check if value is numeric
+                if (val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) > 0) {
+                    rawQty = val;
+                    console.log(`Auto-detected quantity column: "${key}" = ${val}`);
+                    break;
+                }
+            }
+        }
         
         // Convert to number - handle text, decimals, commas
         let quantity = 0;
