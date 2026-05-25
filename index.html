@@ -2,23 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockManager - Stock Management Sheet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StockManager - Stock Management</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>StockManager</h1>
-            <p class="subtitle">Stock Management Sheet</p>
+            <p class="subtitle">Smart Stock Management</p>
         </header>
 
         <!-- Navigation Tabs -->
         <nav class="tabs">
-            <button class="tab-btn active" data-tab="opening-stock">Opening Stock (Excel Upload)</button>
-            <button class="tab-btn" data-tab="stock-new">Stock New</button>
-            <button class="tab-btn" data-tab="stock-in">Stock In</button>
-            <button class="tab-btn" data-tab="stock-out">Stock Out</button>
+            <button class="tab-btn active" data-tab="opening-stock">Upload</button>
+            <button class="tab-btn" data-tab="stock-new">New</button>
+            <button class="tab-btn" data-tab="stock-in">In</button>
+            <button class="tab-btn" data-tab="stock-out">Out</button>
             <button class="tab-btn" data-tab="summary">Summary</button>
         </nav>
 
@@ -85,7 +85,7 @@
                         <label for="new-sku">SKU</label>
                         <div class="sku-input-wrapper">
                             <input type="text" id="new-sku" placeholder="Enter or generate SKU" autocomplete="off">
-                            <button type="button" class="btn btn-small" id="generate-sku">Auto</button>
+                            <button type="button" class="btn-small" id="generate-sku">Auto</button>
                             <div class="sku-suggestions" id="new-sku-suggestions"></div>
                         </div>
                     </div>
@@ -114,13 +114,28 @@
                         <input type="text" id="new-location" placeholder="e.g., Warehouse A">
                     </div>
                 </div>
+                <!-- Image Upload -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Product Image</label>
+                        <div class="image-upload-area" id="image-upload-area">
+                            <input type="file" id="product-image" accept="image/*" hidden>
+                            <button type="button" class="remove-image-btn" id="remove-image">&times;</button>
+                            <div class="upload-placeholder" id="image-placeholder">
+                                <span class="icon">&#128247;</span>
+                                <span>Tap to upload product image</span>
+                            </div>
+                            <img id="image-preview" class="image-preview" style="display:none;">
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary">Add New Stock Item</button>
             </form>
         </section>
 
         <!-- Stock In Tab -->
         <section id="stock-in" class="tab-content">
-            <h2>Stock In (Incoming Stock)</h2>
+            <h2>Stock In (Incoming)</h2>
             <form id="stock-in-form" class="stock-form">
                 <div class="form-row">
                     <div class="form-group">
@@ -132,7 +147,7 @@
                     </div>
                     <div class="form-group">
                         <label for="in-product-display">Product Name</label>
-                        <input type="text" id="in-product-display" placeholder="Auto-filled on SKU select" readonly>
+                        <input type="text" id="in-product-display" placeholder="Auto-filled" readonly>
                     </div>
                 </div>
                 <div class="form-row">
@@ -158,7 +173,7 @@
                 <button type="submit" class="btn btn-success">Record Stock In</button>
             </form>
             <div class="recent-transactions">
-                <h3>Recent Stock In Transactions</h3>
+                <h3>Recent Stock In</h3>
                 <div class="table-wrapper">
                     <table id="stock-in-table">
                         <thead>
@@ -166,9 +181,8 @@
                                 <th>Date</th>
                                 <th>SKU</th>
                                 <th>Product</th>
-                                <th>Qty In</th>
+                                <th>Qty</th>
                                 <th>Source</th>
-                                <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -179,7 +193,7 @@
 
         <!-- Stock Out Tab -->
         <section id="stock-out" class="tab-content">
-            <h2>Stock Out (Outgoing Stock)</h2>
+            <h2>Stock Out (Outgoing)</h2>
             <form id="stock-out-form" class="stock-form">
                 <div class="form-row">
                     <div class="form-group">
@@ -191,7 +205,7 @@
                     </div>
                     <div class="form-group">
                         <label for="out-product-display">Product Name</label>
-                        <input type="text" id="out-product-display" placeholder="Auto-filled on SKU select" readonly>
+                        <input type="text" id="out-product-display" placeholder="Auto-filled" readonly>
                     </div>
                 </div>
                 <div class="form-row">
@@ -211,7 +225,7 @@
                     </div>
                     <div class="form-group">
                         <label for="out-destination">Destination/Customer</label>
-                        <input type="text" id="out-destination" placeholder="Customer or destination">
+                        <input type="text" id="out-destination" placeholder="Customer name">
                     </div>
                 </div>
                 <div class="form-row">
@@ -223,7 +237,7 @@
                 <button type="submit" class="btn btn-danger">Record Stock Out</button>
             </form>
             <div class="recent-transactions">
-                <h3>Recent Stock Out Transactions</h3>
+                <h3>Recent Stock Out</h3>
                 <div class="table-wrapper">
                     <table id="stock-out-table">
                         <thead>
@@ -231,9 +245,8 @@
                                 <th>Date</th>
                                 <th>SKU</th>
                                 <th>Product</th>
-                                <th>Qty Out</th>
+                                <th>Qty</th>
                                 <th>Destination</th>
-                                <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -252,7 +265,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="total-quantity">0</div>
-                    <div class="stat-label">Total Quantity</div>
+                    <div class="stat-label">Total Qty</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="total-value">&#8377;0</div>
@@ -260,24 +273,23 @@
                 </div>
                 <div class="stat-card warning">
                     <div class="stat-value" id="low-stock-count">0</div>
-                    <div class="stat-label">Low Stock Items</div>
+                    <div class="stat-label">Low Stock</div>
                 </div>
             </div>
             <div class="search-bar">
-                <input type="text" id="summary-search" placeholder="Search by SKU, Product Name, or Category...">
+                <input type="text" id="summary-search" placeholder="Search SKU, Product, Category...">
             </div>
             <div class="table-wrapper">
                 <table id="summary-table">
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>SKU</th>
-                            <th>Product Name</th>
-                            <th>Category</th>
-                            <th>Opening</th>
+                            <th>Product</th>
+                            <th>Open</th>
                             <th>In</th>
                             <th>Out</th>
-                            <th>Current Stock</th>
-                            <th>Unit Price</th>
+                            <th>Stock</th>
                             <th>Value</th>
                         </tr>
                     </thead>
@@ -285,7 +297,7 @@
                 </table>
             </div>
             <div class="export-section">
-                <button class="btn btn-primary" id="export-summary">Export Summary (CSV)</button>
+                <button class="btn btn-primary" id="export-summary">Export Excel</button>
             </div>
         </section>
     </div>

@@ -1,10 +1,9 @@
 // ==================== DATA STORE ====================
 const StockManager = {
-    items: [],          // Master stock items
-    stockIn: [],        // Stock In transactions
-    stockOut: [],       // Stock Out transactions
+    items: [],
+    stockIn: [],
+    stockOut: [],
 
-    // Load from localStorage
     load() {
         const data = localStorage.getItem('stockManagerData');
         if (data) {
@@ -15,7 +14,6 @@ const StockManager = {
         }
     },
 
-    // Save to localStorage
     save() {
         localStorage.setItem('stockManagerData', JSON.stringify({
             items: this.items,
@@ -24,34 +22,22 @@ const StockManager = {
         }));
     },
 
-    // Get current stock for an item
     getCurrentStock(sku) {
         const item = this.items.find(i => i.sku === sku);
         if (!item) return 0;
-        const totalIn = this.stockIn
-            .filter(t => t.sku === sku)
-            .reduce((sum, t) => sum + t.quantity, 0);
-        const totalOut = this.stockOut
-            .filter(t => t.sku === sku)
-            .reduce((sum, t) => sum + t.quantity, 0);
+        const totalIn = this.stockIn.filter(t => t.sku === sku).reduce((sum, t) => sum + t.quantity, 0);
+        const totalOut = this.stockOut.filter(t => t.sku === sku).reduce((sum, t) => sum + t.quantity, 0);
         return item.quantity + totalIn - totalOut;
     },
 
-    // Get total in for an item
     getTotalIn(sku) {
-        return this.stockIn
-            .filter(t => t.sku === sku)
-            .reduce((sum, t) => sum + t.quantity, 0);
+        return this.stockIn.filter(t => t.sku === sku).reduce((sum, t) => sum + t.quantity, 0);
     },
 
-    // Get total out for an item
     getTotalOut(sku) {
-        return this.stockOut
-            .filter(t => t.sku === sku)
-            .reduce((sum, t) => sum + t.quantity, 0);
+        return this.stockOut.filter(t => t.sku === sku).reduce((sum, t) => sum + t.quantity, 0);
     },
 
-    // Search items by SKU or name
     searchItems(query) {
         const q = query.toLowerCase();
         return this.items.filter(item =>
@@ -60,12 +46,10 @@ const StockManager = {
         );
     },
 
-    // Generate unique SKU
     generateSKU() {
         const prefix = 'SKU';
         const num = this.items.length + 1;
         let sku = `${prefix}-${String(num).padStart(4, '0')}`;
-        // Ensure unique
         while (this.items.find(i => i.sku === sku)) {
             const rand = Math.floor(Math.random() * 9000) + 1000;
             sku = `${prefix}-${rand}`;
@@ -81,11 +65,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
-
-        // Refresh summary when switching to it
-        if (btn.dataset.tab === 'summary') {
-            renderSummary();
-        }
+        if (btn.dataset.tab === 'summary') renderSummary();
     });
 });
 
@@ -94,9 +74,7 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.className = `toast ${type}`;
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
+    setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
 // ==================== SKU SUGGESTION ====================
@@ -106,58 +84,96 @@ function setupSKUSuggestion(inputId, suggestionsId, onSelect) {
 
     input.addEventListener('input', () => {
         const query = input.value.trim();
-        if (query.length < 1) {
-            suggestions.classList.remove('visible');
-            return;
-        }
+        if (query.length < 1) { suggestions.classList.remove('visible'); return; }
 
         const results = StockManager.searchItems(query);
-        if (results.length === 0) {
-            suggestions.classList.remove('visible');
-            return;
-        }
+        if (results.length === 0) { suggestions.classList.remove('visible'); return; }
 
-        suggestions.innerHTML = results.slice(0, 8).map(item => `
-            <div class="sku-suggestion-item" data-sku="${item.sku}">
-                <span class="sku-code">${item.sku}</span>
-                <span class="sku-name">${item.name} (Qty: ${StockManager.getCurrentStock(item.sku)})</span>
-            </div>
-        `).join('');
+        suggestions.innerHTML = results.slice(0, 8).map(item => {
+            const thumbHtml = item.image
+                ? `<img class="sku-thumb" src="${item.image}" alt="">`
+                : '';
+            return `
+                <div class="sku-suggestion-item" data-sku="${item.sku}">
+                    ${thumbHtml}
+                    <span class="sku-code">${item.sku}</span>
+                    <span class="sku-name">${item.name} (${StockManager.getCurrentStock(item.sku)})</span>
+                </div>
+            `;
+        }).join('');
 
         suggestions.classList.add('visible');
 
-        // Click handlers for suggestions
         suggestions.querySelectorAll('.sku-suggestion-item').forEach(el => {
             el.addEventListener('click', () => {
-                const sku = el.dataset.sku;
-                input.value = sku;
+                input.value = el.dataset.sku;
                 suggestions.classList.remove('visible');
-                if (onSelect) onSelect(sku);
+                if (onSelect) onSelect(el.dataset.sku);
             });
         });
     });
 
-    // Close suggestions on blur
     input.addEventListener('blur', () => {
         setTimeout(() => suggestions.classList.remove('visible'), 200);
     });
 }
 
+// ==================== IMAGE UPLOAD ====================
+let currentImageBase64 = '';
+
+const imageUploadArea = document.getElementById('image-upload-area');
+const productImageInput = document.getElementById('product-image');
+const imagePreview = document.getElementById('image-preview');
+const imagePlaceholder = document.getElementById('image-placeholder');
+const removeImageBtn = document.getElementById('remove-image');
+
+imageUploadArea.addEventListener('click', (e) => {
+    if (e.target === removeImageBtn || e.target.closest('.remove-image-btn')) return;
+    productImageInput.click();
+});
+
+productImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleImageFile(file);
+});
+
+function handleImageFile(file) {
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image size should be less than 5MB', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentImageBase64 = e.target.result;
+        imagePreview.src = currentImageBase64;
+        imagePreview.style.display = 'block';
+        imagePlaceholder.style.display = 'none';
+        removeImageBtn.classList.add('visible');
+    };
+    reader.readAsDataURL(file);
+}
+
+removeImageBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentImageBase64 = '';
+    imagePreview.src = '';
+    imagePreview.style.display = 'none';
+    imagePlaceholder.style.display = 'flex';
+    removeImageBtn.classList.remove('visible');
+    productImageInput.value = '';
+});
+
 // ==================== EXCEL UPLOAD ====================
 let pendingUploadData = null;
-
-// Drag and drop
 const dropZone = document.getElementById('drop-zone');
 
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
-});
-
-dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('drag-over');
-});
-
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
@@ -165,7 +181,6 @@ dropZone.addEventListener('drop', (e) => {
     if (file) processExcelFile(file);
 });
 
-// File input
 document.getElementById('excel-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) processExcelFile(file);
@@ -177,20 +192,16 @@ function processExcelFile(file) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-            if (jsonData.length === 0) {
-                showToast('File is empty or format is incorrect', 'error');
-                return;
-            }
+            if (jsonData.length === 0) { showToast('File is empty!', 'error'); return; }
 
             pendingUploadData = jsonData;
             showPreview(jsonData);
-            showToast(`Found ${jsonData.length} rows in file`, 'info');
+            showToast(`Found ${jsonData.length} rows`, 'info');
         } catch (err) {
-            showToast('Error reading file. Please check the format.', 'error');
+            showToast('Error reading file', 'error');
             console.error(err);
         }
     };
@@ -201,33 +212,27 @@ function showPreview(data) {
     const preview = document.getElementById('upload-preview');
     const thead = document.querySelector('#preview-table thead');
     const tbody = document.querySelector('#preview-table tbody');
-    const count = document.getElementById('preview-count');
-
+    document.getElementById('preview-count').textContent = `(${data.length} rows)`;
     preview.classList.remove('hidden');
-    count.textContent = `(${data.length} rows)`;
 
-    // Headers
     const headers = Object.keys(data[0]);
     thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
 
-    // Rows (show max 10 in preview)
     const previewRows = data.slice(0, 10);
     tbody.innerHTML = previewRows.map(row =>
         `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`
     ).join('');
 
     if (data.length > 10) {
-        tbody.innerHTML += `<tr><td colspan="${headers.length}" style="text-align:center; color:#999;">... and ${data.length - 10} more rows</td></tr>`;
+        tbody.innerHTML += `<tr><td colspan="${headers.length}" style="text-align:center;color:#999;">... +${data.length - 10} more</td></tr>`;
     }
 }
 
-// Confirm upload
 document.getElementById('confirm-upload').addEventListener('click', () => {
     if (!pendingUploadData) return;
 
     let imported = 0;
     pendingUploadData.forEach(row => {
-        // Try to map common column names
         const sku = row['SKU'] || row['sku'] || row['Sku'] || row['SKU Code'] || '';
         const name = row['Product Name'] || row['product_name'] || row['Name'] || row['name'] || row['Product'] || '';
         const category = row['Category'] || row['category'] || row['Cat'] || '';
@@ -235,20 +240,13 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
         const price = parseFloat(row['Unit Price'] || row['unit_price'] || row['Price'] || row['price'] || 0);
 
         if (sku && name) {
-            // Check if SKU already exists
             const existing = StockManager.items.find(i => i.sku === sku);
             if (existing) {
-                // Update existing
                 existing.quantity += quantity;
             } else {
                 StockManager.items.push({
-                    sku,
-                    name,
-                    category,
-                    quantity,
-                    price,
-                    location: '',
-                    dateAdded: new Date().toISOString()
+                    sku, name, category, quantity, price,
+                    location: '', image: '', dateAdded: new Date().toISOString()
                 });
             }
             imported++;
@@ -258,21 +256,18 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
     StockManager.save();
     pendingUploadData = null;
     document.getElementById('upload-preview').classList.add('hidden');
-    showToast(`Successfully imported ${imported} items!`, 'success');
+    showToast(`Imported ${imported} items!`, 'success');
 });
 
-// Cancel upload
 document.getElementById('cancel-upload').addEventListener('click', () => {
     pendingUploadData = null;
     document.getElementById('upload-preview').classList.add('hidden');
 });
 
-// Download template
 document.getElementById('download-template').addEventListener('click', () => {
     const templateData = [
         { 'SKU': 'SKU-0001', 'Product Name': 'Sample Product 1', 'Category': 'Electronics', 'Quantity': 100, 'Unit Price': 250.00 },
         { 'SKU': 'SKU-0002', 'Product Name': 'Sample Product 2', 'Category': 'Clothing', 'Quantity': 50, 'Unit Price': 499.99 },
-        { 'SKU': 'SKU-0003', 'Product Name': 'Sample Product 3', 'Category': 'Food', 'Quantity': 200, 'Unit Price': 45.00 }
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
@@ -295,44 +290,36 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
     const price = parseFloat(document.getElementById('new-price').value) || 0;
     const location = document.getElementById('new-location').value.trim();
 
-    if (!sku || !name) {
-        showToast('SKU and Product Name are required', 'error');
-        return;
-    }
-
-    // Check duplicate SKU
-    if (StockManager.items.find(i => i.sku === sku)) {
-        showToast('SKU already exists!', 'error');
-        return;
-    }
+    if (!sku || !name) { showToast('SKU and Product Name required', 'error'); return; }
+    if (StockManager.items.find(i => i.sku === sku)) { showToast('SKU already exists!', 'error'); return; }
 
     StockManager.items.push({
-        sku,
-        name,
-        category,
-        quantity,
-        price,
-        location,
+        sku, name, category, quantity, price, location,
+        image: currentImageBase64,
         dateAdded: new Date().toISOString()
     });
 
     StockManager.save();
     e.target.reset();
-    showToast(`New stock item "${name}" added successfully!`, 'success');
+    // Reset image
+    currentImageBase64 = '';
+    imagePreview.src = '';
+    imagePreview.style.display = 'none';
+    imagePlaceholder.style.display = 'flex';
+    removeImageBtn.classList.remove('visible');
+    productImageInput.value = '';
+
+    showToast(`"${name}" added successfully!`, 'success');
 });
 
-// SKU suggestion for new stock (to check existing)
 setupSKUSuggestion('new-sku', 'new-sku-suggestions', null);
 
-// ==================== STOCK IN FORM ====================
+// ==================== STOCK IN ====================
 setupSKUSuggestion('in-sku', 'in-sku-suggestions', (sku) => {
     const item = StockManager.items.find(i => i.sku === sku);
-    if (item) {
-        document.getElementById('in-product-display').value = item.name;
-    }
+    if (item) document.getElementById('in-product-display').value = item.name;
 });
 
-// Set today's date as default
 document.getElementById('in-date').valueAsDate = new Date();
 document.getElementById('out-date').valueAsDate = new Date();
 
@@ -344,52 +331,35 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     const source = document.getElementById('in-source').value.trim();
     const notes = document.getElementById('in-notes').value.trim();
 
-    if (!sku || quantity <= 0) {
-        showToast('Please enter a valid SKU and quantity', 'error');
-        return;
-    }
+    if (!sku || quantity <= 0) { showToast('Enter valid SKU and quantity', 'error'); return; }
 
-    // Verify SKU exists
     const item = StockManager.items.find(i => i.sku === sku);
-    if (!item) {
-        showToast('SKU not found! Please add it first in Stock New.', 'error');
-        return;
-    }
+    if (!item) { showToast('SKU not found! Add in Stock New first.', 'error'); return; }
 
-    StockManager.stockIn.push({
-        sku,
-        productName: item.name,
-        quantity,
-        date,
-        source,
-        notes,
-        timestamp: new Date().toISOString()
-    });
-
+    StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, timestamp: new Date().toISOString() });
     StockManager.save();
     e.target.reset();
     document.getElementById('in-date').valueAsDate = new Date();
     document.getElementById('in-product-display').value = '';
     renderStockInTable();
-    showToast(`Stock In: ${quantity} units of ${item.name} recorded`, 'success');
+    showToast(`Stock In: +${quantity} ${item.name}`, 'success');
 });
 
 function renderStockInTable() {
     const tbody = document.querySelector('#stock-in-table tbody');
-    const recent = [...StockManager.stockIn].reverse().slice(0, 20);
+    const recent = [...StockManager.stockIn].reverse().slice(0, 15);
     tbody.innerHTML = recent.map(t => `
         <tr>
             <td>${t.date}</td>
-            <td>${t.sku}</td>
+            <td><strong>${t.sku}</strong></td>
             <td>${t.productName}</td>
-            <td style="color: #27ae60; font-weight: 600;">+${t.quantity}</td>
+            <td style="color:#00b894;font-weight:700;">+${t.quantity}</td>
             <td>${t.source || '-'}</td>
-            <td>${t.notes || '-'}</td>
         </tr>
     `).join('');
 }
 
-// ==================== STOCK OUT FORM ====================
+// ==================== STOCK OUT ====================
 setupSKUSuggestion('out-sku', 'out-sku-suggestions', (sku) => {
     const item = StockManager.items.find(i => i.sku === sku);
     if (item) {
@@ -406,55 +376,34 @@ document.getElementById('stock-out-form').addEventListener('submit', (e) => {
     const destination = document.getElementById('out-destination').value.trim();
     const notes = document.getElementById('out-notes').value.trim();
 
-    if (!sku || quantity <= 0) {
-        showToast('Please enter a valid SKU and quantity', 'error');
-        return;
-    }
+    if (!sku || quantity <= 0) { showToast('Enter valid SKU and quantity', 'error'); return; }
 
-    // Verify SKU exists
     const item = StockManager.items.find(i => i.sku === sku);
-    if (!item) {
-        showToast('SKU not found! Please add it first in Stock New.', 'error');
-        return;
-    }
+    if (!item) { showToast('SKU not found!', 'error'); return; }
 
-    // Check available stock
     const available = StockManager.getCurrentStock(sku);
-    if (quantity > available) {
-        showToast(`Insufficient stock! Available: ${available}`, 'error');
-        return;
-    }
+    if (quantity > available) { showToast(`Insufficient stock! Available: ${available}`, 'error'); return; }
 
-    StockManager.stockOut.push({
-        sku,
-        productName: item.name,
-        quantity,
-        date,
-        destination,
-        notes,
-        timestamp: new Date().toISOString()
-    });
-
+    StockManager.stockOut.push({ sku, productName: item.name, quantity, date, destination, notes, timestamp: new Date().toISOString() });
     StockManager.save();
     e.target.reset();
     document.getElementById('out-date').valueAsDate = new Date();
     document.getElementById('out-product-display').value = '';
     document.getElementById('out-available').value = '';
     renderStockOutTable();
-    showToast(`Stock Out: ${quantity} units of ${item.name} recorded`, 'success');
+    showToast(`Stock Out: -${quantity} ${item.name}`, 'success');
 });
 
 function renderStockOutTable() {
     const tbody = document.querySelector('#stock-out-table tbody');
-    const recent = [...StockManager.stockOut].reverse().slice(0, 20);
+    const recent = [...StockManager.stockOut].reverse().slice(0, 15);
     tbody.innerHTML = recent.map(t => `
         <tr>
             <td>${t.date}</td>
-            <td>${t.sku}</td>
+            <td><strong>${t.sku}</strong></td>
             <td>${t.productName}</td>
-            <td style="color: #e74c3c; font-weight: 600;">-${t.quantity}</td>
+            <td style="color:#ff6b6b;font-weight:700;">-${t.quantity}</td>
             <td>${t.destination || '-'}</td>
-            <td>${t.notes || '-'}</td>
         </tr>
     `).join('');
 }
@@ -469,13 +418,11 @@ function renderSummary() {
         filteredItems = filteredItems.filter(item =>
             item.sku.toLowerCase().includes(searchQuery) ||
             item.name.toLowerCase().includes(searchQuery) ||
-            item.category.toLowerCase().includes(searchQuery)
+            (item.category || '').toLowerCase().includes(searchQuery)
         );
     }
 
-    let totalQuantity = 0;
-    let totalValue = 0;
-    let lowStockCount = 0;
+    let totalQuantity = 0, totalValue = 0, lowStockCount = 0;
 
     tbody.innerHTML = filteredItems.map(item => {
         const totalIn = StockManager.getTotalIn(item.sku);
@@ -487,32 +434,32 @@ function renderSummary() {
         if (currentStock <= 10) lowStockCount++;
 
         const stockClass = currentStock <= 10 ? 'low-stock' : '';
+        const imgHtml = item.image
+            ? `<img class="product-thumb" src="${item.image}" alt="${item.name}">`
+            : `<span class="no-image-thumb">N/A</span>`;
+
         return `
             <tr>
+                <td>${imgHtml}</td>
                 <td><strong>${item.sku}</strong></td>
                 <td>${item.name}</td>
-                <td>${item.category}</td>
                 <td>${item.quantity}</td>
-                <td style="color: #27ae60;">+${totalIn}</td>
-                <td style="color: #e74c3c;">-${totalOut}</td>
+                <td style="color:#00b894;font-weight:600;">+${totalIn}</td>
+                <td style="color:#ff6b6b;font-weight:600;">-${totalOut}</td>
                 <td class="${stockClass}">${currentStock}</td>
-                <td>&#8377;${item.price.toFixed(2)}</td>
-                <td>&#8377;${value.toFixed(2)}</td>
+                <td>&#8377;${value.toFixed(0)}</td>
             </tr>
         `;
     }).join('');
 
-    // Update stats
     document.getElementById('total-items').textContent = StockManager.items.length;
     document.getElementById('total-quantity').textContent = totalQuantity;
-    document.getElementById('total-value').textContent = `\u20B9${totalValue.toFixed(2)}`;
+    document.getElementById('total-value').textContent = `\u20B9${totalValue.toFixed(0)}`;
     document.getElementById('low-stock-count').textContent = lowStockCount;
 }
 
-// Search in summary
 document.getElementById('summary-search').addEventListener('input', renderSummary);
 
-// Export CSV
 document.getElementById('export-summary').addEventListener('click', () => {
     const exportData = StockManager.items.map(item => ({
         'SKU': item.sku,
