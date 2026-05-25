@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockManager - Stock Management Sheet</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>StockManager</h1>
+            <p class="subtitle">Stock Management Sheet</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="opening-stock">Opening Stock (Excel Upload)</button>
+            <button class="tab-btn" data-tab="stock-new">Stock New</button>
+            <button class="tab-btn" data-tab="stock-in">Stock In</button>
+            <button class="tab-btn" data-tab="stock-out">Stock Out</button>
+            <button class="tab-btn" data-tab="summary">Summary</button>
+        </nav>
+
+        <!-- Opening Stock Tab -->
+        <section id="opening-stock" class="tab-content active">
+            <h2>Opening Stock - Excel Upload</h2>
+            <div class="upload-section">
+                <div class="upload-box" id="drop-zone">
+                    <div class="upload-icon">&#128194;</div>
+                    <p>Drag & Drop Excel file here</p>
+                    <p class="small">or</p>
+                    <label class="upload-btn">
+                        Choose File
+                        <input type="file" id="excel-upload" accept=".xlsx,.xls,.csv" hidden>
+                    </label>
+                    <p class="small">Supported: .xlsx, .xls, .csv</p>
+                </div>
+                <div class="upload-info">
+                    <h3>Expected Format:</h3>
+                    <table class="format-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SKU-001</td>
+                                <td>Widget A</td>
+                                <td>Electronics</td>
+                                <td>100</td>
+                                <td>25.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button class="btn btn-secondary" id="download-template">Download Template</button>
+                </div>
+            </div>
+            <div id="upload-preview" class="upload-preview hidden">
+                <h3>Preview <span id="preview-count"></span></h3>
+                <div class="table-wrapper">
+                    <table id="preview-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="preview-actions">
+                    <button class="btn btn-primary" id="confirm-upload">Confirm & Import</button>
+                    <button class="btn btn-secondary" id="cancel-upload">Cancel</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock New Tab -->
+        <section id="stock-new" class="tab-content">
+            <h2>Add New Stock Item</h2>
+            <form id="new-stock-form" class="stock-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-sku">SKU</label>
+                        <div class="sku-input-wrapper">
+                            <input type="text" id="new-sku" placeholder="Enter or generate SKU" autocomplete="off">
+                            <button type="button" class="btn btn-small" id="generate-sku">Auto</button>
+                            <div class="sku-suggestions" id="new-sku-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-product">Product Name</label>
+                        <input type="text" id="new-product" placeholder="Product name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-category">Category</label>
+                        <input type="text" id="new-category" placeholder="Category" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-quantity">Opening Quantity</label>
+                        <input type="number" id="new-quantity" placeholder="0" min="0" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-price">Unit Price (&#8377;)</label>
+                        <input type="number" id="new-price" placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-location">Location/Warehouse</label>
+                        <input type="text" id="new-location" placeholder="e.g., Warehouse A">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add New Stock Item</button>
+            </form>
+        </section>
+
+        <!-- Stock In Tab -->
+        <section id="stock-in" class="tab-content">
+            <h2>Stock In (Incoming Stock)</h2>
+            <form id="stock-in-form" class="stock-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-sku">SKU</label>
+                        <div class="sku-input-wrapper">
+                            <input type="text" id="in-sku" placeholder="Type SKU to search..." autocomplete="off" required>
+                            <div class="sku-suggestions" id="in-sku-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="in-product-display">Product Name</label>
+                        <input type="text" id="in-product-display" placeholder="Auto-filled on SKU select" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-quantity">Quantity In</label>
+                        <input type="number" id="in-quantity" placeholder="0" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="in-date">Date</label>
+                        <input type="date" id="in-date" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-source">Source/Supplier</label>
+                        <input type="text" id="in-source" placeholder="Supplier name">
+                    </div>
+                    <div class="form-group">
+                        <label for="in-notes">Notes</label>
+                        <input type="text" id="in-notes" placeholder="Optional notes">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Record Stock In</button>
+            </form>
+            <div class="recent-transactions">
+                <h3>Recent Stock In Transactions</h3>
+                <div class="table-wrapper">
+                    <table id="stock-in-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>SKU</th>
+                                <th>Product</th>
+                                <th>Qty In</th>
+                                <th>Source</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock Out Tab -->
+        <section id="stock-out" class="tab-content">
+            <h2>Stock Out (Outgoing Stock)</h2>
+            <form id="stock-out-form" class="stock-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="out-sku">SKU</label>
+                        <div class="sku-input-wrapper">
+                            <input type="text" id="out-sku" placeholder="Type SKU to search..." autocomplete="off" required>
+                            <div class="sku-suggestions" id="out-sku-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="out-product-display">Product Name</label>
+                        <input type="text" id="out-product-display" placeholder="Auto-filled on SKU select" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="out-available">Available Stock</label>
+                        <input type="text" id="out-available" placeholder="-" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="out-quantity">Quantity Out</label>
+                        <input type="number" id="out-quantity" placeholder="0" min="1" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="out-date">Date</label>
+                        <input type="date" id="out-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="out-destination">Destination/Customer</label>
+                        <input type="text" id="out-destination" placeholder="Customer or destination">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="out-notes">Notes</label>
+                        <input type="text" id="out-notes" placeholder="Optional notes">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-danger">Record Stock Out</button>
+            </form>
+            <div class="recent-transactions">
+                <h3>Recent Stock Out Transactions</h3>
+                <div class="table-wrapper">
+                    <table id="stock-out-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>SKU</th>
+                                <th>Product</th>
+                                <th>Qty Out</th>
+                                <th>Destination</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Tab -->
+        <section id="summary" class="tab-content">
+            <h2>Stock Summary</h2>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-items">0</div>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-quantity">0</div>
+                    <div class="stat-label">Total Quantity</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-value">&#8377;0</div>
+                    <div class="stat-label">Total Value</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="low-stock-count">0</div>
+                    <div class="stat-label">Low Stock Items</div>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="summary-search" placeholder="Search by SKU, Product Name, or Category...">
+            </div>
+            <div class="table-wrapper">
+                <table id="summary-table">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Opening</th>
+                            <th>In</th>
+                            <th>Out</th>
+                            <th>Current Stock</th>
+                            <th>Unit Price</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="export-section">
+                <button class="btn btn-primary" id="export-summary">Export Summary (CSV)</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
