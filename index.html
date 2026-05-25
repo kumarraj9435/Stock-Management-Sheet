@@ -13,8 +13,8 @@
             <p class="subtitle">Smart Stock Management</p>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="tabs">
+        <!-- Top Tabs (visible on desktop) -->
+        <nav class="tabs desktop-tabs">
             <button class="tab-btn active" data-tab="opening-stock">Upload</button>
             <button class="tab-btn" data-tab="stock-new">New</button>
             <button class="tab-btn" data-tab="stock-in">In</button>
@@ -123,7 +123,11 @@
                             <button type="button" class="remove-image-btn" id="remove-image">&times;</button>
                             <div class="upload-placeholder" id="image-placeholder">
                                 <span class="icon">&#128247;</span>
-                                <span>Tap to upload product image</span>
+                                <span>Upload product image</span>
+                                <div class="image-source-btns">
+                                    <button type="button" id="btn-camera">&#128248; Camera</button>
+                                    <button type="button" id="btn-gallery">&#128444; Gallery</button>
+                                </div>
                             </div>
                             <img id="image-preview" class="image-preview" style="display:none;">
                         </div>
@@ -283,7 +287,7 @@
                 <table id="summary-table">
                     <thead>
                         <tr>
-                            <th>Image</th>
+                            <th>Img</th>
                             <th>SKU</th>
                             <th>Product</th>
                             <th>Open</th>
@@ -297,10 +301,34 @@
                 </table>
             </div>
             <div class="export-section">
-                <button class="btn btn-primary" id="export-summary">Export Excel</button>
+                <button class="btn btn-primary" id="export-summary">Export to Excel</button>
             </div>
         </section>
     </div>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav">
+        <button class="bottom-nav-btn active" data-tab="opening-stock">
+            <span class="nav-icon">&#128194;</span>
+            <span class="nav-label">Upload</span>
+        </button>
+        <button class="bottom-nav-btn" data-tab="stock-new">
+            <span class="nav-icon">&#10133;</span>
+            <span class="nav-label">New</span>
+        </button>
+        <button class="bottom-nav-btn" data-tab="stock-in">
+            <span class="nav-icon">&#128229;</span>
+            <span class="nav-label">In</span>
+        </button>
+        <button class="bottom-nav-btn" data-tab="stock-out">
+            <span class="nav-icon">&#128228;</span>
+            <span class="nav-label">Out</span>
+        </button>
+        <button class="bottom-nav-btn" data-tab="summary">
+            <span class="nav-icon">&#128202;</span>
+            <span class="nav-label">Summary</span>
+        </button>
+    </nav>
 
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>

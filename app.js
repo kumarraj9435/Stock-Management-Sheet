@@ -5,21 +5,30 @@ const StockManager = {
     stockOut: [],
 
     load() {
-        const data = localStorage.getItem('stockManagerData');
-        if (data) {
-            const parsed = JSON.parse(data);
-            this.items = parsed.items || [];
-            this.stockIn = parsed.stockIn || [];
-            this.stockOut = parsed.stockOut || [];
+        try {
+            const data = localStorage.getItem('stockManagerData');
+            if (data) {
+                const parsed = JSON.parse(data);
+                this.items = parsed.items || [];
+                this.stockIn = parsed.stockIn || [];
+                this.stockOut = parsed.stockOut || [];
+            }
+        } catch (e) {
+            console.error('Error loading data:', e);
         }
     },
 
     save() {
-        localStorage.setItem('stockManagerData', JSON.stringify({
-            items: this.items,
-            stockIn: this.stockIn,
-            stockOut: this.stockOut
-        }));
+        try {
+            localStorage.setItem('stockManagerData', JSON.stringify({
+                items: this.items,
+                stockIn: this.stockIn,
+                stockOut: this.stockOut
+            }));
+        } catch (e) {
+            console.error('Error saving data:', e);
+            showToast('Storage full! Try removing some images.', 'error');
+        }
     },
 
     getCurrentStock(sku) {
@@ -59,14 +68,34 @@ const StockManager = {
 };
 
 // ==================== TAB NAVIGATION ====================
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
-        if (btn.dataset.tab === 'summary') renderSummary();
+function switchTab(tabName) {
+    // Update desktop tabs
+    document.querySelectorAll('.desktop-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.desktop-tabs .tab-btn').forEach(b => {
+        if (b.dataset.tab === tabName) b.classList.add('active');
     });
+
+    // Update bottom nav
+    document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav-btn').forEach(b => {
+        if (b.dataset.tab === tabName) b.classList.add('active');
+    });
+
+    // Switch content
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+
+    if (tabName === 'summary') renderSummary();
+}
+
+// Desktop tabs
+document.querySelectorAll('.desktop-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// Bottom nav
+document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
 // ==================== TOAST NOTIFICATION ====================
@@ -114,11 +143,11 @@ function setupSKUSuggestion(inputId, suggestionsId, onSelect) {
     });
 
     input.addEventListener('blur', () => {
-        setTimeout(() => suggestions.classList.remove('visible'), 200);
+        setTimeout(() => suggestions.classList.remove('visible'), 250);
     });
 }
 
-// ==================== IMAGE UPLOAD ====================
+// ==================== IMAGE UPLOAD (Camera + Gallery) ====================
 let currentImageBase64 = '';
 
 const imageUploadArea = document.getElementById('image-upload-area');
@@ -127,8 +156,17 @@ const imagePreview = document.getElementById('image-preview');
 const imagePlaceholder = document.getElementById('image-placeholder');
 const removeImageBtn = document.getElementById('remove-image');
 
-imageUploadArea.addEventListener('click', (e) => {
-    if (e.target === removeImageBtn || e.target.closest('.remove-image-btn')) return;
+// Camera button
+document.getElementById('btn-camera').addEventListener('click', (e) => {
+    e.stopPropagation();
+    productImageInput.setAttribute('capture', 'environment');
+    productImageInput.click();
+});
+
+// Gallery button
+document.getElementById('btn-gallery').addEventListener('click', (e) => {
+    e.stopPropagation();
+    productImageInput.removeAttribute('capture');
     productImageInput.click();
 });
 
@@ -149,13 +187,38 @@ function handleImageFile(file) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        currentImageBase64 = e.target.result;
-        imagePreview.src = currentImageBase64;
-        imagePreview.style.display = 'block';
-        imagePlaceholder.style.display = 'none';
-        removeImageBtn.classList.add('visible');
+        // Compress image for localStorage
+        compressImage(e.target.result, 300, 0.7, (compressed) => {
+            currentImageBase64 = compressed;
+            imagePreview.src = compressed;
+            imagePreview.style.display = 'block';
+            imagePlaceholder.style.display = 'none';
+            removeImageBtn.classList.add('visible');
+        });
     };
     reader.readAsDataURL(file);
+}
+
+// Compress image to avoid localStorage quota issues
+function compressImage(dataUrl, maxWidth, quality, callback) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
 }
 
 removeImageBtn.addEventListener('click', (e) => {
@@ -220,7 +283,7 @@ function showPreview(data) {
 
     const previewRows = data.slice(0, 10);
     tbody.innerHTML = previewRows.map(row =>
-        `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`
+        `<tr>${headers.map(h => `<td>${row[h] !== undefined ? row[h] : ''}</td>`).join('')}</tr>`
     ).join('');
 
     if (data.length > 10) {
@@ -257,6 +320,7 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
     pendingUploadData = null;
     document.getElementById('upload-preview').classList.add('hidden');
     showToast(`Imported ${imported} items!`, 'success');
+    renderSummary();
 });
 
 document.getElementById('cancel-upload').addEventListener('click', () => {
@@ -268,6 +332,7 @@ document.getElementById('download-template').addEventListener('click', () => {
     const templateData = [
         { 'SKU': 'SKU-0001', 'Product Name': 'Sample Product 1', 'Category': 'Electronics', 'Quantity': 100, 'Unit Price': 250.00 },
         { 'SKU': 'SKU-0002', 'Product Name': 'Sample Product 2', 'Category': 'Clothing', 'Quantity': 50, 'Unit Price': 499.99 },
+        { 'SKU': 'SKU-0003', 'Product Name': 'Sample Product 3', 'Category': 'Food', 'Quantity': 200, 'Unit Price': 45.00 },
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
@@ -309,7 +374,7 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
     removeImageBtn.classList.remove('visible');
     productImageInput.value = '';
 
-    showToast(`"${name}" added successfully!`, 'success');
+    showToast(`"${name}" added!`, 'success');
 });
 
 setupSKUSuggestion('new-sku', 'new-sku-suggestions', null);
@@ -334,7 +399,7 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     if (!sku || quantity <= 0) { showToast('Enter valid SKU and quantity', 'error'); return; }
 
     const item = StockManager.items.find(i => i.sku === sku);
-    if (!item) { showToast('SKU not found! Add in Stock New first.', 'error'); return; }
+    if (!item) { showToast('SKU not found! Add in New tab first.', 'error'); return; }
 
     StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, timestamp: new Date().toISOString() });
     StockManager.save();
@@ -342,12 +407,16 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     document.getElementById('in-date').valueAsDate = new Date();
     document.getElementById('in-product-display').value = '';
     renderStockInTable();
-    showToast(`Stock In: +${quantity} ${item.name}`, 'success');
+    showToast(`+${quantity} ${item.name} added!`, 'success');
 });
 
 function renderStockInTable() {
     const tbody = document.querySelector('#stock-in-table tbody');
     const recent = [...StockManager.stockIn].reverse().slice(0, 15);
+    if (recent.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
+        return;
+    }
     tbody.innerHTML = recent.map(t => `
         <tr>
             <td>${t.date}</td>
@@ -382,7 +451,7 @@ document.getElementById('stock-out-form').addEventListener('submit', (e) => {
     if (!item) { showToast('SKU not found!', 'error'); return; }
 
     const available = StockManager.getCurrentStock(sku);
-    if (quantity > available) { showToast(`Insufficient stock! Available: ${available}`, 'error'); return; }
+    if (quantity > available) { showToast(`Insufficient! Available: ${available}`, 'error'); return; }
 
     StockManager.stockOut.push({ sku, productName: item.name, quantity, date, destination, notes, timestamp: new Date().toISOString() });
     StockManager.save();
@@ -391,12 +460,16 @@ document.getElementById('stock-out-form').addEventListener('submit', (e) => {
     document.getElementById('out-product-display').value = '';
     document.getElementById('out-available').value = '';
     renderStockOutTable();
-    showToast(`Stock Out: -${quantity} ${item.name}`, 'success');
+    showToast(`-${quantity} ${item.name} recorded!`, 'success');
 });
 
 function renderStockOutTable() {
     const tbody = document.querySelector('#stock-out-table tbody');
     const recent = [...StockManager.stockOut].reverse().slice(0, 15);
+    if (recent.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
+        return;
+    }
     tbody.innerHTML = recent.map(t => `
         <tr>
             <td>${t.date}</td>
@@ -424,33 +497,37 @@ function renderSummary() {
 
     let totalQuantity = 0, totalValue = 0, lowStockCount = 0;
 
-    tbody.innerHTML = filteredItems.map(item => {
-        const totalIn = StockManager.getTotalIn(item.sku);
-        const totalOut = StockManager.getTotalOut(item.sku);
-        const currentStock = item.quantity + totalIn - totalOut;
-        const value = currentStock * item.price;
-        totalQuantity += currentStock;
-        totalValue += value;
-        if (currentStock <= 10) lowStockCount++;
+    if (filteredItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
+    } else {
+        tbody.innerHTML = filteredItems.map(item => {
+            const totalIn = StockManager.getTotalIn(item.sku);
+            const totalOut = StockManager.getTotalOut(item.sku);
+            const currentStock = item.quantity + totalIn - totalOut;
+            const value = currentStock * item.price;
+            totalQuantity += currentStock;
+            totalValue += value;
+            if (currentStock <= 10) lowStockCount++;
 
-        const stockClass = currentStock <= 10 ? 'low-stock' : '';
-        const imgHtml = item.image
-            ? `<img class="product-thumb" src="${item.image}" alt="${item.name}">`
-            : `<span class="no-image-thumb">N/A</span>`;
+            const stockClass = currentStock <= 10 ? 'low-stock' : '';
+            const imgHtml = item.image
+                ? `<img class="product-thumb" src="${item.image}" alt="${item.name}">`
+                : `<span class="no-image-thumb">N/A</span>`;
 
-        return `
-            <tr>
-                <td>${imgHtml}</td>
-                <td><strong>${item.sku}</strong></td>
-                <td>${item.name}</td>
-                <td>${item.quantity}</td>
-                <td style="color:#00b894;font-weight:600;">+${totalIn}</td>
-                <td style="color:#ff6b6b;font-weight:600;">-${totalOut}</td>
-                <td class="${stockClass}">${currentStock}</td>
-                <td>&#8377;${value.toFixed(0)}</td>
-            </tr>
-        `;
-    }).join('');
+            return `
+                <tr>
+                    <td>${imgHtml}</td>
+                    <td><strong>${item.sku}</strong></td>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td style="color:#00b894;font-weight:600;">+${totalIn}</td>
+                    <td style="color:#ff6b6b;font-weight:600;">-${totalOut}</td>
+                    <td class="${stockClass}">${currentStock}</td>
+                    <td>&#8377;${value.toFixed(0)}</td>
+                </tr>
+            `;
+        }).join('');
+    }
 
     document.getElementById('total-items').textContent = StockManager.items.length;
     document.getElementById('total-quantity').textContent = totalQuantity;
@@ -460,11 +537,18 @@ function renderSummary() {
 
 document.getElementById('summary-search').addEventListener('input', renderSummary);
 
+// ==================== EXPORT TO EXCEL ====================
 document.getElementById('export-summary').addEventListener('click', () => {
+    if (StockManager.items.length === 0) {
+        showToast('No data to export! Add items first.', 'error');
+        return;
+    }
+
     const exportData = StockManager.items.map(item => ({
         'SKU': item.sku,
         'Product Name': item.name,
-        'Category': item.category,
+        'Category': item.category || '',
+        'Location': item.location || '',
         'Opening Stock': item.quantity,
         'Total In': StockManager.getTotalIn(item.sku),
         'Total Out': StockManager.getTotalOut(item.sku),
@@ -473,11 +557,45 @@ document.getElementById('export-summary').addEventListener('click', () => {
         'Total Value': StockManager.getCurrentStock(item.sku) * item.price
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock Summary');
-    XLSX.writeFile(wb, `stock_summary_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    showToast('Summary exported!', 'info');
+    try {
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Auto column width
+        const colWidths = Object.keys(exportData[0]).map(key => ({
+            wch: Math.max(key.length, ...exportData.map(row => String(row[key]).length)) + 2
+        }));
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Stock Summary');
+
+        // Add Stock In sheet
+        if (StockManager.stockIn.length > 0) {
+            const inData = StockManager.stockIn.map(t => ({
+                'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
+                'Quantity': t.quantity, 'Source': t.source || '', 'Notes': t.notes || ''
+            }));
+            const wsIn = XLSX.utils.json_to_sheet(inData);
+            XLSX.utils.book_append_sheet(wb, wsIn, 'Stock In');
+        }
+
+        // Add Stock Out sheet
+        if (StockManager.stockOut.length > 0) {
+            const outData = StockManager.stockOut.map(t => ({
+                'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
+                'Quantity': t.quantity, 'Destination': t.destination || '', 'Notes': t.notes || ''
+            }));
+            const wsOut = XLSX.utils.json_to_sheet(outData);
+            XLSX.utils.book_append_sheet(wb, wsOut, 'Stock Out');
+        }
+
+        const filename = `StockManager_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        showToast(`Exported: ${filename}`, 'success');
+    } catch (err) {
+        console.error('Export error:', err);
+        showToast('Export failed! Try again.', 'error');
+    }
 });
 
 // ==================== INITIALIZE ====================

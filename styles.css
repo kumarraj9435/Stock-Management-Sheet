@@ -11,6 +11,7 @@ body {
     min-height: 100vh;
     color: #333;
     line-height: 1.6;
+    padding-bottom: 70px;
 }
 
 .container {
@@ -22,25 +23,25 @@ body {
 /* Header */
 header {
     text-align: center;
-    padding: 25px 0 15px;
+    padding: 20px 0 12px;
 }
 
 header h1 {
     font-size: 2.2rem;
     color: white;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     letter-spacing: 1px;
 }
 
 header .subtitle {
     color: rgba(255,255,255,0.85);
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
-/* Tabs - Mobile First */
-.tabs {
-    display: flex;
+/* Desktop Tabs */
+.desktop-tabs {
+    display: none;
     gap: 4px;
     margin-bottom: 20px;
     padding: 6px;
@@ -51,12 +52,12 @@ header .subtitle {
     justify-content: center;
 }
 
-.tab-btn {
+.desktop-tabs .tab-btn {
     padding: 10px 14px;
     border: none;
     background: rgba(255,255,255,0.2);
     color: white;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     cursor: pointer;
     border-radius: 10px;
     transition: all 0.3s;
@@ -66,15 +67,70 @@ header .subtitle {
     text-align: center;
 }
 
-.tab-btn:hover {
+.desktop-tabs .tab-btn:hover {
     background: rgba(255,255,255,0.35);
     transform: translateY(-1px);
 }
 
-.tab-btn.active {
+.desktop-tabs .tab-btn.active {
     background: white;
     color: #667eea;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 5px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    z-index: 999;
+    border-top: 1px solid #eee;
+}
+
+.bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 10px;
+    transition: all 0.3s;
+    min-width: 55px;
+}
+
+.bottom-nav-btn .nav-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.bottom-nav-btn .nav-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.bottom-nav-btn.active {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+}
+
+.bottom-nav-btn.active .nav-label {
+    color: #667eea;
+}
+
+.bottom-nav-btn.active .nav-icon {
+    transform: scale(1.2);
 }
 
 /* Tab Content */
@@ -82,9 +138,10 @@ header .subtitle {
     display: none;
     background: white;
     border-radius: 20px;
-    padding: 25px 20px;
+    padding: 22px 18px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     animation: fadeIn 0.3s ease;
+    margin-bottom: 20px;
 }
 
 @keyframes fadeIn {
@@ -97,9 +154,9 @@ header .subtitle {
 }
 
 .tab-content h2 {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     color: #2c3e50;
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -108,7 +165,7 @@ header .subtitle {
 .tab-content h2::before {
     content: '';
     width: 5px;
-    height: 28px;
+    height: 26px;
     background: linear-gradient(to bottom, #667eea, #764ba2);
     border-radius: 3px;
 }
@@ -124,7 +181,7 @@ header .subtitle {
 .upload-box {
     border: 3px dashed #c8b6ff;
     border-radius: 16px;
-    padding: 35px 20px;
+    padding: 30px 15px;
     text-align: center;
     transition: all 0.3s;
     cursor: pointer;
@@ -139,17 +196,18 @@ header .subtitle {
 }
 
 .upload-icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
+    font-size: 2.5rem;
+    margin-bottom: 8px;
 }
 
 .upload-box p {
-    margin: 5px 0;
+    margin: 4px 0;
     color: #666;
+    font-size: 0.9rem;
 }
 
 .upload-box .small {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #999;
 }
 
@@ -160,9 +218,10 @@ header .subtitle {
     color: white;
     border-radius: 8px;
     cursor: pointer;
-    margin: 10px 0;
+    margin: 8px 0;
     transition: all 0.3s;
     font-weight: 600;
+    font-size: 0.9rem;
 }
 
 .upload-btn:hover {
@@ -170,16 +229,21 @@ header .subtitle {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+.upload-info {
+    padding: 10px 0;
+}
+
 .upload-info h3 {
     margin-bottom: 10px;
     color: #2c3e50;
+    font-size: 1rem;
 }
 
 .format-table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 15px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     border-radius: 8px;
     overflow: hidden;
 }
@@ -187,7 +251,7 @@ header .subtitle {
 .format-table th,
 .format-table td {
     border: 1px solid #e0e0e0;
-    padding: 8px 10px;
+    padding: 6px 8px;
     text-align: left;
 }
 
@@ -203,12 +267,12 @@ header .subtitle {
 }
 
 .upload-preview h3 {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     color: #2c3e50;
 }
 
 .preview-actions {
-    margin-top: 15px;
+    margin-top: 12px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -222,8 +286,8 @@ header .subtitle {
 .form-row {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 14px;
+    margin-bottom: 14px;
 }
 
 .form-group {
@@ -236,10 +300,10 @@ header .subtitle {
 }
 
 .form-group label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: #555;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -249,9 +313,10 @@ header .subtitle {
     padding: 12px 14px;
     border: 2px solid #e8e8e8;
     border-radius: 10px;
-    font-size: 0.95rem;
+    font-size: 1rem;
     transition: all 0.3s;
     background: #fafafa;
+    -webkit-appearance: none;
 }
 
 .form-group input:focus,
@@ -293,12 +358,40 @@ header .subtitle {
 .image-upload-area .upload-placeholder {
     color: #888;
     font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .image-upload-area .upload-placeholder .icon {
     font-size: 2rem;
     display: block;
     margin-bottom: 5px;
+}
+
+.image-source-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.image-source-btns button {
+    padding: 8px 16px;
+    border: 2px solid #667eea;
+    background: white;
+    color: #667eea;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.image-source-btns button:hover {
+    background: #667eea;
+    color: white;
 }
 
 .image-preview {
@@ -313,18 +406,19 @@ header .subtitle {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: #ff4757;
     color: white;
     border: none;
-    font-size: 1rem;
+    font-size: 1.1rem;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
     line-height: 1;
+    z-index: 5;
 }
 
 .remove-image-btn.visible {
@@ -362,13 +456,13 @@ header .subtitle {
 }
 
 .sku-suggestion-item {
-    padding: 10px 14px;
+    padding: 10px 12px;
     cursor: pointer;
     border-bottom: 1px solid #f0f0f0;
     transition: background 0.2s;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .sku-suggestion-item:hover {
@@ -376,8 +470,8 @@ header .subtitle {
 }
 
 .sku-suggestion-item .sku-thumb {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 6px;
     object-fit: cover;
     border: 1px solid #eee;
@@ -386,29 +480,32 @@ header .subtitle {
 .sku-suggestion-item .sku-code {
     font-weight: 700;
     color: #667eea;
+    font-size: 0.85rem;
 }
 
 .sku-suggestion-item .sku-name {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #7f8c8d;
-    margin-left: 5px;
+    margin-left: 3px;
 }
 
 /* Buttons */
 .btn {
-    padding: 12px 24px;
+    padding: 14px 24px;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    width: 100%;
+    text-align: center;
 }
 
 .btn-small {
-    padding: 10px 14px;
+    padding: 12px 14px;
     font-size: 0.75rem;
     border: none;
     border-radius: 8px;
@@ -473,27 +570,30 @@ header .subtitle {
     overflow-x: auto;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    -webkit-overflow-scrolling: touch;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    min-width: 400px;
 }
 
 thead th {
     background: linear-gradient(135deg, #2d3436, #636e72);
     color: white;
-    padding: 12px 10px;
+    padding: 10px 8px;
     text-align: left;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
 tbody td {
-    padding: 10px;
+    padding: 8px;
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -511,22 +611,22 @@ tbody tr:nth-child(even):hover {
 
 /* Product thumbnail in table */
 .product-thumb {
-    width: 35px;
-    height: 35px;
+    width: 32px;
+    height: 32px;
     border-radius: 6px;
     object-fit: cover;
     border: 2px solid #e0e0e0;
 }
 
 .no-image-thumb {
-    width: 35px;
-    height: 35px;
+    width: 32px;
+    height: 32px;
     border-radius: 6px;
     background: linear-gradient(135deg, #dfe6e9, #b2bec3);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     color: #636e72;
 }
 
@@ -534,14 +634,14 @@ tbody tr:nth-child(even):hover {
 .summary-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 18px;
 }
 
 .stat-card {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    padding: 18px 15px;
+    padding: 15px 12px;
     border-radius: 14px;
     text-align: center;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
@@ -549,7 +649,7 @@ tbody tr:nth-child(even):hover {
 }
 
 .stat-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
 }
 
 .stat-card:nth-child(2) {
@@ -568,21 +668,21 @@ tbody tr:nth-child(even):hover {
 }
 
 .stat-value {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 800;
 }
 
 .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     opacity: 0.9;
-    margin-top: 4px;
+    margin-top: 3px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 /* Search Bar */
 .search-bar {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .search-bar input {
@@ -604,36 +704,37 @@ tbody tr:nth-child(even):hover {
 
 /* Recent Transactions */
 .recent-transactions {
-    margin-top: 25px;
+    margin-top: 22px;
 }
 
 .recent-transactions h3 {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: #2c3e50;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 /* Export Section */
 .export-section {
-    margin-top: 20px;
+    margin-top: 18px;
     text-align: center;
 }
 
 /* Toast */
 .toast {
     position: fixed;
-    bottom: 20px;
+    bottom: 80px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 14px 28px;
+    padding: 12px 24px;
     border-radius: 12px;
     color: white;
     font-weight: 600;
-    z-index: 1000;
+    z-index: 1001;
     transition: all 0.3s;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-    max-width: 90%;
+    max-width: 85%;
     text-align: center;
+    font-size: 0.85rem;
 }
 
 .toast.success {
@@ -689,32 +790,38 @@ tbody tr:nth-child(even):hover {
     }
 
     .stat-value {
-        font-size: 2rem;
-    }
-
-    .tab-btn {
-        font-size: 0.85rem;
-        padding: 12px 18px;
+        font-size: 1.8rem;
     }
 
     .tab-content {
-        padding: 30px;
+        padding: 28px;
     }
 
     table {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
+    }
+
+    .btn {
+        width: auto;
     }
 }
 
 /* ============ RESPONSIVE - Desktop ============ */
 @media (min-width: 1024px) {
+    body {
+        padding-bottom: 20px;
+    }
+
     header h1 {
         font-size: 2.8rem;
     }
 
-    .tab-btn {
-        font-size: 0.9rem;
-        padding: 14px 22px;
+    .desktop-tabs {
+        display: flex;
+    }
+
+    .bottom-nav {
+        display: none;
     }
 
     .tab-content {
@@ -722,6 +829,14 @@ tbody tr:nth-child(even):hover {
     }
 
     table {
-        font-size: 0.9rem;
+        font-size: 0.88rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .toast {
+        bottom: 30px;
     }
 }
