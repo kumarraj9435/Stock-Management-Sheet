@@ -916,3 +916,21 @@ tbody tr:nth-child(even):hover {
 .modal-actions .btn {
     flex: 1;
 }
+
+
+
+/* Bulk Section */
+.bulk-section {
+    margin-top: 25px;
+    padding: 20px;
+    border: 2px dashed #a29bfe;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f0e6ff 0%, #e8f4fd 100%);
+    text-align: center;
+}
+
+.bulk-section h3 {
+    color: #6c5ce7;
+    margin-bottom: 8px;
+    font-size: 1rem;
+}

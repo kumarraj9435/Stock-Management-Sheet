@@ -120,6 +120,7 @@
                         <label>Product Image</label>
                         <div class="image-upload-area" id="image-upload-area">
                             <input type="file" id="product-image" accept="image/*" hidden>
+                            <input type="file" id="product-image-camera" accept="image/*" capture="environment" hidden>
                             <button type="button" class="remove-image-btn" id="remove-image">&times;</button>
                             <div class="upload-placeholder" id="image-placeholder">
                                 <span class="icon">&#128247;</span>
@@ -135,6 +136,14 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Add New Stock Item</button>
             </form>
+            <div class="bulk-section">
+                <h3>Bulk Add New Items (Excel)</h3>
+                <p style="font-size:0.8rem;color:#666;margin-bottom:10px;">Upload Excel with columns: SKU, Product Name, Category, Quantity, Unit Price</p>
+                <label class="upload-btn">
+                    Choose Excel File
+                    <input type="file" id="bulk-new-upload" accept=".xlsx,.xls,.csv" hidden>
+                </label>
+            </div>
         </section>
 
         <!-- Stock In Tab -->
@@ -180,6 +189,7 @@
                         <label>Attach Photo (Invoice/Product)</label>
                         <div class="image-upload-area" id="in-image-upload-area">
                             <input type="file" id="in-product-image" accept="image/*" hidden>
+                            <input type="file" id="in-product-image-camera" accept="image/*" capture="environment" hidden>
                             <button type="button" class="remove-image-btn" id="in-remove-image">&times;</button>
                             <div class="upload-placeholder" id="in-image-placeholder">
                                 <span class="icon">&#128247;</span>
@@ -195,6 +205,14 @@
                 </div>
                 <button type="submit" class="btn btn-success">Record Stock In</button>
             </form>
+            <div class="bulk-section">
+                <h3>Bulk Stock In (Excel)</h3>
+                <p style="font-size:0.8rem;color:#666;margin-bottom:10px;">Upload Excel with columns: SKU, Quantity, Source (optional), Date (optional)</p>
+                <label class="upload-btn">
+                    Choose Excel File
+                    <input type="file" id="bulk-in-upload" accept=".xlsx,.xls,.csv" hidden>
+                </label>
+            </div>
             <div class="recent-transactions">
                 <h3>Recent Stock In</h3>
                 <div class="table-wrapper">
@@ -259,6 +277,14 @@
                 </div>
                 <button type="submit" class="btn btn-danger">Record Stock Out</button>
             </form>
+            <div class="bulk-section">
+                <h3>Bulk Stock Out (Excel)</h3>
+                <p style="font-size:0.8rem;color:#666;margin-bottom:10px;">Upload Excel with columns: SKU, Quantity, Destination (optional), Date (optional)</p>
+                <label class="upload-btn">
+                    Choose Excel File
+                    <input type="file" id="bulk-out-upload" accept=".xlsx,.xls,.csv" hidden>
+                </label>
+            </div>
             <div class="recent-transactions">
                 <h3>Recent Stock Out</h3>
                 <div class="table-wrapper">

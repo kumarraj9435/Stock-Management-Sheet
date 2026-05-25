@@ -159,8 +159,7 @@ const removeImageBtn = document.getElementById('remove-image');
 // Camera button
 document.getElementById('btn-camera').addEventListener('click', (e) => {
     e.stopPropagation();
-    productImageInput.setAttribute('capture', 'environment');
-    productImageInput.click();
+    document.getElementById('product-image-camera').click();
 });
 
 // Gallery button
@@ -171,6 +170,11 @@ document.getElementById('btn-gallery').addEventListener('click', (e) => {
 });
 
 productImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleImageFile(file);
+});
+
+document.getElementById('product-image-camera').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) handleImageFile(file);
 });
@@ -462,9 +466,7 @@ let inImageBase64 = '';
 // Stock In image buttons
 document.getElementById('in-btn-camera').addEventListener('click', (e) => {
     e.stopPropagation();
-    const input = document.getElementById('in-product-image');
-    input.setAttribute('capture', 'environment');
-    input.click();
+    document.getElementById('in-product-image-camera').click();
 });
 
 document.getElementById('in-btn-gallery').addEventListener('click', (e) => {
@@ -475,6 +477,23 @@ document.getElementById('in-btn-gallery').addEventListener('click', (e) => {
 });
 
 document.getElementById('in-product-image').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            compressImage(ev.target.result, 300, 0.7, (compressed) => {
+                inImageBase64 = compressed;
+                document.getElementById('in-image-preview').src = compressed;
+                document.getElementById('in-image-preview').style.display = 'block';
+                document.getElementById('in-image-placeholder').style.display = 'none';
+                document.getElementById('in-remove-image').classList.add('visible');
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('in-product-image-camera').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
@@ -854,6 +873,208 @@ document.getElementById('clear-modal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('clear-modal')) {
         document.getElementById('clear-modal').classList.add('hidden');
     }
+});
+
+// ==================== BULK OPERATIONS ====================
+
+// Bulk Stock In
+document.getElementById('bulk-in-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = new Uint8Array(ev.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet);
+            
+            if (rows.length === 0) { showToast('File is empty!', 'error'); return; }
+            
+            let success = 0, failed = 0;
+            const today = new Date().toISOString().slice(0, 10);
+            
+            rows.forEach(row => {
+                const rowKeys = Object.keys(row);
+                function getVal(names) {
+                    for (const n of names) {
+                        if (row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== '') return row[n];
+                        const found = rowKeys.find(k => k.toLowerCase().trim() === n.toLowerCase().trim());
+                        if (found && row[found] !== undefined && String(row[found]).trim() !== '') return row[found];
+                        const partial = rowKeys.find(k => k.toLowerCase().includes(n.toLowerCase()));
+                        if (partial && row[partial] !== undefined && String(row[partial]).trim() !== '') return row[partial];
+                    }
+                    return '';
+                }
+                
+                const sku = String(getVal(['SKU', 'sku', 'Code', 'Item Code'])).trim();
+                const rawQty = getVal(['Quantity', 'Qty', 'qty', 'QTY', 'Stock', 'Units', 'Count', 'Pcs']);
+                const quantity = parseInt(String(rawQty).replace(/[^0-9]/g, '')) || 0;
+                const source = String(getVal(['Source', 'Supplier', 'From', 'Vendor'])).trim();
+                const date = String(getVal(['Date', 'date'])).trim() || today;
+                
+                if (!sku || quantity <= 0) { failed++; return; }
+                
+                const item = StockManager.items.find(i => i.sku === sku);
+                if (!item) { failed++; return; }
+                
+                StockManager.stockIn.push({
+                    sku, productName: item.name, quantity, date, source,
+                    notes: 'Bulk Import', image: '', timestamp: new Date().toISOString()
+                });
+                success++;
+            });
+            
+            StockManager.save();
+            renderStockInTable();
+            renderSummary();
+            e.target.value = '';
+            
+            if (failed > 0) {
+                showToast(`Stock In: ${success} done, ${failed} failed (SKU not found or qty=0)`, 'info');
+            } else {
+                showToast(`Bulk Stock In: ${success} entries added!`, 'success');
+            }
+        } catch (err) {
+            showToast('Error reading file', 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// Bulk Stock Out
+document.getElementById('bulk-out-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = new Uint8Array(ev.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet);
+            
+            if (rows.length === 0) { showToast('File is empty!', 'error'); return; }
+            
+            let success = 0, failed = 0, insufficient = 0;
+            const today = new Date().toISOString().slice(0, 10);
+            
+            rows.forEach(row => {
+                const rowKeys = Object.keys(row);
+                function getVal(names) {
+                    for (const n of names) {
+                        if (row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== '') return row[n];
+                        const found = rowKeys.find(k => k.toLowerCase().trim() === n.toLowerCase().trim());
+                        if (found && row[found] !== undefined && String(row[found]).trim() !== '') return row[found];
+                        const partial = rowKeys.find(k => k.toLowerCase().includes(n.toLowerCase()));
+                        if (partial && row[partial] !== undefined && String(row[partial]).trim() !== '') return row[partial];
+                    }
+                    return '';
+                }
+                
+                const sku = String(getVal(['SKU', 'sku', 'Code', 'Item Code'])).trim();
+                const rawQty = getVal(['Quantity', 'Qty', 'qty', 'QTY', 'Stock', 'Units', 'Count', 'Pcs']);
+                const quantity = parseInt(String(rawQty).replace(/[^0-9]/g, '')) || 0;
+                const destination = String(getVal(['Destination', 'Customer', 'To', 'Buyer'])).trim();
+                const date = String(getVal(['Date', 'date'])).trim() || today;
+                
+                if (!sku || quantity <= 0) { failed++; return; }
+                
+                const item = StockManager.items.find(i => i.sku === sku);
+                if (!item) { failed++; return; }
+                
+                const available = StockManager.getCurrentStock(sku);
+                if (quantity > available) { insufficient++; return; }
+                
+                StockManager.stockOut.push({
+                    sku, productName: item.name, quantity, date, destination,
+                    notes: 'Bulk Import', timestamp: new Date().toISOString()
+                });
+                success++;
+            });
+            
+            StockManager.save();
+            renderStockOutTable();
+            renderSummary();
+            e.target.value = '';
+            
+            let msg = `Bulk Stock Out: ${success} done`;
+            if (failed > 0) msg += `, ${failed} failed`;
+            if (insufficient > 0) msg += `, ${insufficient} insufficient stock`;
+            showToast(msg, success > 0 ? 'success' : 'error');
+        } catch (err) {
+            showToast('Error reading file', 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// Bulk New Stock
+document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = new Uint8Array(ev.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet);
+            
+            if (rows.length === 0) { showToast('File is empty!', 'error'); return; }
+            
+            let added = 0, updated = 0, failed = 0;
+            
+            rows.forEach(row => {
+                const rowKeys = Object.keys(row);
+                function getVal(names) {
+                    for (const n of names) {
+                        if (row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== '') return row[n];
+                        const found = rowKeys.find(k => k.toLowerCase().trim() === n.toLowerCase().trim());
+                        if (found && row[found] !== undefined && String(row[found]).trim() !== '') return row[found];
+                        const partial = rowKeys.find(k => k.toLowerCase().includes(n.toLowerCase()));
+                        if (partial && row[partial] !== undefined && String(row[partial]).trim() !== '') return row[partial];
+                    }
+                    return '';
+                }
+                
+                const sku = String(getVal(['SKU', 'sku', 'Code', 'Item Code', 'Product Code'])).trim();
+                const name = String(getVal(['Product Name', 'Name', 'Product', 'Item', 'Item Name', 'Description', 'Title'])).trim();
+                const category = String(getVal(['Category', 'Cat', 'Type', 'Group'])).trim();
+                const rawQty = getVal(['Quantity', 'Qty', 'qty', 'QTY', 'Stock', 'Opening Stock', 'Units', 'Count', 'Pcs', 'Opening']);
+                const quantity = parseInt(String(rawQty).replace(/[^0-9]/g, '')) || 0;
+                const rawPrice = getVal(['Unit Price', 'Price', 'Rate', 'MRP', 'Cost']);
+                const price = parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 0;
+                
+                if (!sku || !name) { failed++; return; }
+                
+                const existing = StockManager.items.find(i => i.sku === sku);
+                if (existing) {
+                    existing.quantity += quantity;
+                    if (price > 0) existing.price = price;
+                    if (category) existing.category = category;
+                    updated++;
+                } else {
+                    StockManager.items.push({
+                        sku, name, category, quantity, price,
+                        location: '', image: '', dateAdded: new Date().toISOString()
+                    });
+                    added++;
+                }
+            });
+            
+            StockManager.save();
+            renderSummary();
+            e.target.value = '';
+            showToast(`Bulk: ${added} new + ${updated} updated${failed > 0 ? ', ' + failed + ' failed' : ''}`, 'success');
+        } catch (err) {
+            showToast('Error reading file', 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
 });
 
 // ==================== INITIALIZE ====================
