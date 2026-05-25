@@ -321,8 +321,25 @@
             </div>
             <div class="export-section">
                 <button class="btn btn-primary" id="export-summary">Export to Excel</button>
+                <button class="btn btn-secondary" id="backup-now" style="margin-top:10px;">Backup Now</button>
+                <button class="btn btn-danger" id="clear-all-btn" style="margin-top:10px;">Clear All Data</button>
             </div>
         </section>
+
+        <!-- Clear All Confirmation Modal -->
+        <div id="clear-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Clear All Data</h3>
+                <p>Ye action sab data permanently delete kar dega!</p>
+                <p style="font-size:0.85rem;color:#666;margin:10px 0;">Pehle backup le lo. Password enter karo:</p>
+                <input type="password" id="clear-password" placeholder="Enter password: 1234" class="modal-input">
+                <p id="clear-error" style="color:#ff6b6b;font-size:0.8rem;display:none;margin-top:5px;"></p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="clear-cancel">Cancel</button>
+                    <button class="btn btn-danger" id="clear-confirm">Delete All</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom Navigation (Mobile) -->

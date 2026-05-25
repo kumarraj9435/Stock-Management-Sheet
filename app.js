@@ -726,6 +726,136 @@ document.getElementById('export-summary').addEventListener('click', () => {
     }
 });
 
+// ==================== BACKUP ====================
+function createBackup() {
+    if (StockManager.items.length === 0) {
+        showToast('No data to backup!', 'error');
+        return;
+    }
+
+    const exportData = StockManager.items.map(item => ({
+        'SKU': item.sku,
+        'Product Name': item.name,
+        'Category': item.category || '',
+        'Opening Stock': item.quantity,
+        'Total In': StockManager.getTotalIn(item.sku),
+        'Total Out': StockManager.getTotalOut(item.sku),
+        'Current Stock': StockManager.getCurrentStock(item.sku),
+        'Unit Price': item.price,
+        'Total Value': StockManager.getCurrentStock(item.sku) * item.price
+    }));
+
+    try {
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Stock Summary');
+
+        if (StockManager.stockIn.length > 0) {
+            const inData = StockManager.stockIn.map(t => ({
+                'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
+                'Quantity': t.quantity, 'Source': t.source || '', 'Notes': t.notes || ''
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inData), 'Stock In');
+        }
+
+        if (StockManager.stockOut.length > 0) {
+            const outData = StockManager.stockOut.map(t => ({
+                'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
+                'Quantity': t.quantity, 'Destination': t.destination || '', 'Notes': t.notes || ''
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(outData), 'Stock Out');
+        }
+
+        const now = new Date();
+        const filename = `Backup_StockManager_${now.toISOString().slice(0, 10)}_${now.getHours()}${now.getMinutes()}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        showToast(`Backup saved: ${filename}`, 'success');
+    } catch (err) {
+        console.error('Backup error:', err);
+        showToast('Backup failed!', 'error');
+    }
+}
+
+// Backup button
+document.getElementById('backup-now').addEventListener('click', createBackup);
+
+// Auto backup - save backup data in localStorage with timestamp
+function autoBackupToStorage() {
+    try {
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            items: StockManager.items,
+            stockIn: StockManager.stockIn,
+            stockOut: StockManager.stockOut
+        };
+        localStorage.setItem('stockManagerBackup', JSON.stringify(backupData));
+    } catch (e) {
+        console.log('Auto backup skipped - storage full');
+    }
+}
+
+// Run auto backup every time data is saved
+const originalSave = StockManager.save.bind(StockManager);
+StockManager.save = function() {
+    originalSave();
+    autoBackupToStorage();
+};
+
+// ==================== CLEAR ALL DATA ====================
+const CLEAR_PASSWORD = '1234';
+
+document.getElementById('clear-all-btn').addEventListener('click', () => {
+    document.getElementById('clear-modal').classList.remove('hidden');
+    document.getElementById('clear-password').value = '';
+    document.getElementById('clear-error').style.display = 'none';
+});
+
+document.getElementById('clear-cancel').addEventListener('click', () => {
+    document.getElementById('clear-modal').classList.add('hidden');
+});
+
+document.getElementById('clear-confirm').addEventListener('click', () => {
+    const password = document.getElementById('clear-password').value.trim();
+    
+    if (password !== CLEAR_PASSWORD) {
+        document.getElementById('clear-error').textContent = 'Wrong password! Try again.';
+        document.getElementById('clear-error').style.display = 'block';
+        return;
+    }
+
+    // Double confirmation
+    if (!confirm('Are you SURE? Sab data permanently delete ho jayega! Ye action undo nahi ho sakta.')) {
+        return;
+    }
+
+    // Create backup before clearing
+    createBackup();
+
+    // Clear all data
+    StockManager.items = [];
+    StockManager.stockIn = [];
+    StockManager.stockOut = [];
+    localStorage.removeItem('stockManagerData');
+    localStorage.removeItem('stockManagerBackup');
+
+    // Close modal
+    document.getElementById('clear-modal').classList.add('hidden');
+
+    // Refresh UI
+    renderStockInTable();
+    renderStockOutTable();
+    renderSummary();
+
+    showToast('All data cleared! Backup downloaded.', 'success');
+});
+
+// Close modal on outside click
+document.getElementById('clear-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('clear-modal')) {
+        document.getElementById('clear-modal').classList.add('hidden');
+    }
+});
+
 // ==================== INITIALIZE ====================
 document.addEventListener('DOMContentLoaded', () => {
     StockManager.load();
