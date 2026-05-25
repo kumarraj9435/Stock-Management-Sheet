@@ -658,8 +658,8 @@ function renderSummary() {
 
             const stockClass = currentStock <= 10 ? 'low-stock' : '';
             const imgHtml = item.image
-                ? `<img class="product-thumb" src="${item.image}" alt="${item.name}">`
-                : `<span class="no-image-thumb">N/A</span>`;
+                ? `<img class="product-thumb add-image-btn" src="${item.image}" alt="${item.name}" data-sku="${item.sku}" title="Tap to change image">`
+                : `<span class="no-image-thumb add-image-btn" data-sku="${item.sku}" title="Tap to add image">+</span>`;
 
             return `
                 <tr>
@@ -674,6 +674,34 @@ function renderSummary() {
                 </tr>
             `;
         }).join('');
+
+        // Add click handlers for image upload on each item
+        document.querySelectorAll('.add-image-btn').forEach(el => {
+            el.addEventListener('click', () => {
+                const sku = el.dataset.sku;
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        compressImage(ev.target.result, 300, 0.7, (compressed) => {
+                            const item = StockManager.items.find(i => i.sku === sku);
+                            if (item) {
+                                item.image = compressed;
+                                StockManager.save();
+                                renderSummary();
+                                showToast(`Image added for ${item.name}!`, 'success');
+                            }
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            });
+        });
     }
 
     document.getElementById('total-items').textContent = StockManager.items.length;

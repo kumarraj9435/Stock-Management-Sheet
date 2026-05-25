@@ -934,3 +934,28 @@ tbody tr:nth-child(even):hover {
     margin-bottom: 8px;
     font-size: 1rem;
 }
+
+
+
+/* Add Image Button in Summary */
+.add-image-btn {
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.add-image-btn:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.no-image-thumb.add-image-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.no-image-thumb.add-image-btn:hover {
+    transform: scale(1.15);
+}
