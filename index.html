@@ -174,6 +174,25 @@
                         <input type="text" id="in-notes" placeholder="Optional notes">
                     </div>
                 </div>
+                <!-- Stock In Image -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Attach Photo (Invoice/Product)</label>
+                        <div class="image-upload-area" id="in-image-upload-area">
+                            <input type="file" id="in-product-image" accept="image/*" hidden>
+                            <button type="button" class="remove-image-btn" id="in-remove-image">&times;</button>
+                            <div class="upload-placeholder" id="in-image-placeholder">
+                                <span class="icon">&#128247;</span>
+                                <span>Attach photo</span>
+                                <div class="image-source-btns">
+                                    <button type="button" id="in-btn-camera">&#128248; Camera</button>
+                                    <button type="button" id="in-btn-gallery">&#128444; Gallery</button>
+                                </div>
+                            </div>
+                            <img id="in-image-preview" class="image-preview" style="display:none;">
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-success">Record Stock In</button>
             </form>
             <div class="recent-transactions">

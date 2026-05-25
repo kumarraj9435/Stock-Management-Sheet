@@ -174,18 +174,20 @@ header .subtitle {
 .upload-section {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 15px;
     align-items: start;
 }
 
 .upload-box {
     border: 3px dashed #c8b6ff;
     border-radius: 16px;
-    padding: 30px 15px;
+    padding: 25px 12px;
     text-align: center;
     transition: all 0.3s;
     cursor: pointer;
     background: linear-gradient(135deg, #f8f0ff 0%, #e8f4fd 100%);
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .upload-box:hover,
@@ -231,6 +233,7 @@ header .subtitle {
 
 .upload-info {
     padding: 10px 0;
+    overflow-x: auto;
 }
 
 .upload-info h3 {
@@ -243,9 +246,12 @@ header .subtitle {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 15px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     border-radius: 8px;
     overflow: hidden;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .format-table th,

@@ -295,30 +295,63 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
     if (!pendingUploadData) return;
 
     let imported = 0;
+    let qtyImported = 0;
+
+    // Debug: log first row keys
+    console.log('Excel columns detected:', Object.keys(pendingUploadData[0]));
+    console.log('First row data:', pendingUploadData[0]);
+
     pendingUploadData.forEach(row => {
-        // Case-insensitive column matching helper
-        function getVal(row, keys) {
-            // First try exact match
-            for (const key of keys) {
-                if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+        // Smart column matching - finds value by trying multiple possible header names
+        const rowKeys = Object.keys(row);
+
+        function getVal(possibleNames) {
+            // Exact match first
+            for (const name of possibleNames) {
+                if (row[name] !== undefined && row[name] !== null && String(row[name]).trim() !== '') {
+                    return row[name];
+                }
             }
-            // Then try case-insensitive match on all row keys
-            const rowKeys = Object.keys(row);
-            for (const key of keys) {
-                const found = rowKeys.find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
-                if (found && row[found] !== undefined && row[found] !== null && row[found] !== '') return row[found];
+            // Case-insensitive + trim match
+            for (const name of possibleNames) {
+                const found = rowKeys.find(k => k.toLowerCase().trim() === name.toLowerCase().trim());
+                if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== '') {
+                    return row[found];
+                }
+            }
+            // Partial match (column name contains the keyword)
+            for (const name of possibleNames) {
+                const found = rowKeys.find(k => k.toLowerCase().trim().includes(name.toLowerCase().trim()));
+                if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== '') {
+                    return row[found];
+                }
             }
             return '';
         }
 
-        const sku = getVal(row, ['SKU', 'sku', 'Sku', 'SKU Code', 'sku_code', 'Item Code', 'item_code', 'Code']);
-        const name = getVal(row, ['Product Name', 'product_name', 'Name', 'name', 'Product', 'Item', 'Item Name', 'item_name', 'Description']);
-        const category = getVal(row, ['Category', 'category', 'Cat', 'Type', 'Group']);
-        const rawQty = getVal(row, ['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'Stock', 'stock', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'Count']);
-        const rawPrice = getVal(row, ['Unit Price', 'unit_price', 'Price', 'price', 'Rate', 'rate', 'MRP', 'mrp', 'Cost', 'cost', 'Unit Cost']);
+        const sku = String(getVal(['SKU', 'sku', 'Sku', 'SKU Code', 'sku_code', 'Item Code', 'item_code', 'Code', 'code', 'Product Code', 'product_code', 'Article'])).trim();
+        const name = String(getVal(['Product Name', 'product_name', 'Name', 'name', 'Product', 'Item', 'Item Name', 'item_name', 'Description', 'description', 'Title', 'title', 'Product Title'])).trim();
+        const category = String(getVal(['Category', 'category', 'Cat', 'Type', 'Group', 'group', 'Section'])).trim();
+        
+        // Quantity - try all possible column names
+        let rawQty = getVal(['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'QUANTITY', 'Stock', 'stock', 'STOCK', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'units', 'Count', 'count', 'Pcs', 'pcs', 'Nos', 'nos', 'Available', 'available', 'Balance', 'balance', 'In Hand', 'On Hand']);
+        
+        // Convert to number - handle text, decimals, commas
+        let quantity = 0;
+        if (rawQty !== '') {
+            // Remove commas, spaces, and other non-numeric chars except decimal point and minus
+            const cleaned = String(rawQty).replace(/[^0-9.\-]/g, '');
+            quantity = parseInt(cleaned) || 0;
+        }
 
-        const quantity = parseInt(rawQty) || 0;
-        const price = parseFloat(rawPrice) || 0;
+        let rawPrice = getVal(['Unit Price', 'unit_price', 'Price', 'price', 'PRICE', 'Rate', 'rate', 'MRP', 'mrp', 'Cost', 'cost', 'Unit Cost', 'unit_cost', 'Selling Price', 'selling_price', 'Amount']);
+        let price = 0;
+        if (rawPrice !== '') {
+            const cleanedPrice = String(rawPrice).replace(/[^0-9.\-]/g, '');
+            price = parseFloat(cleanedPrice) || 0;
+        }
+
+        console.log(`Row: SKU=${sku}, Name=${name}, Qty=${quantity}, Price=${price}`);
 
         if (sku && name) {
             const existing = StockManager.items.find(i => i.sku === sku);
@@ -331,13 +364,19 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
                 });
             }
             imported++;
+            if (quantity > 0) qtyImported++;
         }
     });
 
     StockManager.save();
     pendingUploadData = null;
     document.getElementById('upload-preview').classList.add('hidden');
-    showToast(`Imported ${imported} items (with quantities)!`, 'success');
+    
+    if (qtyImported === 0 && imported > 0) {
+        showToast(`${imported} items imported but Quantity column not found! Check column header name.`, 'error');
+    } else {
+        showToast(`Imported ${imported} items with quantities!`, 'success');
+    }
     renderSummary();
 });
 
@@ -398,6 +437,50 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
 setupSKUSuggestion('new-sku', 'new-sku-suggestions', null);
 
 // ==================== STOCK IN ====================
+let inImageBase64 = '';
+
+// Stock In image buttons
+document.getElementById('in-btn-camera').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = document.getElementById('in-product-image');
+    input.setAttribute('capture', 'environment');
+    input.click();
+});
+
+document.getElementById('in-btn-gallery').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = document.getElementById('in-product-image');
+    input.removeAttribute('capture');
+    input.click();
+});
+
+document.getElementById('in-product-image').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            compressImage(ev.target.result, 300, 0.7, (compressed) => {
+                inImageBase64 = compressed;
+                document.getElementById('in-image-preview').src = compressed;
+                document.getElementById('in-image-preview').style.display = 'block';
+                document.getElementById('in-image-placeholder').style.display = 'none';
+                document.getElementById('in-remove-image').classList.add('visible');
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('in-remove-image').addEventListener('click', (e) => {
+    e.stopPropagation();
+    inImageBase64 = '';
+    document.getElementById('in-image-preview').src = '';
+    document.getElementById('in-image-preview').style.display = 'none';
+    document.getElementById('in-image-placeholder').style.display = 'flex';
+    document.getElementById('in-remove-image').classList.remove('visible');
+    document.getElementById('in-product-image').value = '';
+});
+
 setupSKUSuggestion('in-sku', 'in-sku-suggestions', (sku) => {
     const item = StockManager.items.find(i => i.sku === sku);
     if (item) document.getElementById('in-product-display').value = item.name;
@@ -419,11 +502,18 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     const item = StockManager.items.find(i => i.sku === sku);
     if (!item) { showToast('SKU not found! Add in New tab first.', 'error'); return; }
 
-    StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, timestamp: new Date().toISOString() });
+    StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, image: inImageBase64, timestamp: new Date().toISOString() });
     StockManager.save();
     e.target.reset();
     document.getElementById('in-date').valueAsDate = new Date();
     document.getElementById('in-product-display').value = '';
+    // Reset in image
+    inImageBase64 = '';
+    document.getElementById('in-image-preview').src = '';
+    document.getElementById('in-image-preview').style.display = 'none';
+    document.getElementById('in-image-placeholder').style.display = 'flex';
+    document.getElementById('in-remove-image').classList.remove('visible');
+    document.getElementById('in-product-image').value = '';
     renderStockInTable();
     showToast(`+${quantity} ${item.name} added!`, 'success');
 });
