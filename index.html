@@ -24,6 +24,13 @@
         <header>
             <h1>StockManager</h1>
             <p class="subtitle">Smart Stock Management</p>
+            <!-- Company Switcher -->
+            <div id="company-switcher" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+                <select id="company-select" style="padding:8px 14px;border:2px solid rgba(255,255,255,0.4);border-radius:10px;background:rgba(255,255,255,0.2);color:white;font-size:0.85rem;font-weight:600;cursor:pointer;backdrop-filter:blur(5px);outline:none;">
+                </select>
+                <button id="add-company-btn" style="padding:6px 12px;border:2px solid rgba(255,255,255,0.4);border-radius:8px;background:rgba(255,255,255,0.15);color:white;font-size:0.8rem;font-weight:700;cursor:pointer;">+ Add</button>
+                <button id="delete-company-btn" style="padding:6px 12px;border:2px solid rgba(255,107,107,0.6);border-radius:8px;background:rgba(255,107,107,0.2);color:#ffcdd2;font-size:0.8rem;font-weight:700;cursor:pointer;">Del</button>
+            </div>
         </header>
 
         <!-- Top Tabs (visible on desktop) -->
