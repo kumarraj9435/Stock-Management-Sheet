@@ -372,6 +372,7 @@
                             <th>Out</th>
                             <th>Stock</th>
                             <th>Value</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -426,6 +427,56 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Edit Item Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content" style="max-width:450px;text-align:left;">
+            <h3 style="color:#667eea;text-align:center;">Edit Item</h3>
+            <form id="edit-item-form" style="margin-top:15px;">
+                <input type="hidden" id="edit-sku-original">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-sku">SKU</label>
+                        <input type="text" id="edit-sku" readonly style="background:#f0f0f0;">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ean">EAN / Barcode</label>
+                        <input type="text" id="edit-ean" placeholder="EAN">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-name">Product Name</label>
+                        <input type="text" id="edit-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-category">Category</label>
+                        <input type="text" id="edit-category">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-quantity">Opening Qty</label>
+                        <input type="number" id="edit-quantity" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-price">Unit Price</label>
+                        <input type="number" id="edit-price" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="edit-location">Location</label>
+                        <input type="text" id="edit-location" placeholder="Warehouse">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="edit-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Barcode Scanner Modal -->
     <div id="barcode-modal" class="modal hidden">
