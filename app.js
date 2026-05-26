@@ -79,6 +79,8 @@ function setupCompanySwitcher() {
     });
 
     addBtn.addEventListener('click', () => {
+        const pwd = prompt('Password enter karo:');
+        if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
         const name = prompt('New company ka naam enter karo:');
         if (!name || !name.trim()) return;
         const id = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
@@ -103,6 +105,8 @@ function setupCompanySwitcher() {
     });
 
     delBtn.addEventListener('click', () => {
+        const pwd = prompt('Password enter karo:');
+        if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
         const select = document.getElementById('company-select');
         if (select.options.length <= 1) {
             showToast('Last company delete nahi kar sakte!', 'error');
@@ -822,7 +826,7 @@ function renderSummary() {
     let totalQuantity = 0, totalValue = 0, lowStockCount = 0;
 
     if (filteredItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
     } else {
         tbody.innerHTML = filteredItems.map(item => {
             const totalIn = StockManager.getTotalIn(item.sku);
@@ -842,6 +846,7 @@ function renderSummary() {
                 <tr>
                     <td>${imgHtml}</td>
                     <td><strong>${item.sku}</strong></td>
+                    <td style="font-size:0.7rem;color:#888;">${item.ean || '-'}</td>
                     <td>${item.name}</td>
                     <td>${item.quantity}</td>
                     <td style="color:#00b894;font-weight:600;">+${totalIn}</td>
