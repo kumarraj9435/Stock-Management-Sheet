@@ -1272,12 +1272,27 @@ function setupLogin() {
     const loginError = document.getElementById('login-error');
     const mainApp = document.getElementById('main-app');
 
-    // Check if already logged in this session
-    if (sessionStorage.getItem('stockManagerLoggedIn') === 'true') {
-        loginModal.classList.add('hidden');
-        mainApp.style.display = 'block';
-        document.getElementById('bottom-nav-bar').style.display = '';
-        return true;
+    // Check if already logged in (within 20 minutes)
+    const loginTime = sessionStorage.getItem('stockManagerLoginTime');
+    if (sessionStorage.getItem('stockManagerLoggedIn') === 'true' && loginTime) {
+        const elapsed = Date.now() - parseInt(loginTime);
+        if (elapsed < 20 * 60 * 1000) { // 20 minutes
+            loginModal.classList.add('hidden');
+            mainApp.style.display = 'block';
+            document.getElementById('bottom-nav-bar').style.display = '';
+            // Set timeout for remaining time
+            const remaining = (20 * 60 * 1000) - elapsed;
+            setTimeout(() => {
+                sessionStorage.removeItem('stockManagerLoggedIn');
+                sessionStorage.removeItem('stockManagerLoginTime');
+                location.reload();
+            }, remaining);
+            return true;
+        } else {
+            // Session expired
+            sessionStorage.removeItem('stockManagerLoggedIn');
+            sessionStorage.removeItem('stockManagerLoginTime');
+        }
     }
 
     // Login button click
@@ -1294,9 +1309,16 @@ function setupLogin() {
         const pwd = loginPassword.value.trim();
         if (pwd === APP_PASSWORD) {
             sessionStorage.setItem('stockManagerLoggedIn', 'true');
+            sessionStorage.setItem('stockManagerLoginTime', Date.now().toString());
             loginModal.classList.add('hidden');
             mainApp.style.display = 'block';
             document.getElementById('bottom-nav-bar').style.display = '';
+            // Auto-expire after 20 minutes
+            setTimeout(() => {
+                sessionStorage.removeItem('stockManagerLoggedIn');
+                sessionStorage.removeItem('stockManagerLoginTime');
+                location.reload();
+            }, 20 * 60 * 1000);
             initApp();
         } else {
             loginError.textContent = 'Wrong password! Try again.';
