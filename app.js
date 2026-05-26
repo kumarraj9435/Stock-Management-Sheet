@@ -879,7 +879,7 @@ document.getElementById('backup-now').addEventListener('click', createBackup);
 
 
 // ==================== CLEAR ALL DATA ====================
-const CLEAR_PASSWORD = '1234';
+const CLEAR_PASSWORD = 'Raj@9435';
 
 document.getElementById('clear-all-btn').addEventListener('click', () => {
     document.getElementById('clear-modal').classList.remove('hidden');
@@ -1144,21 +1144,67 @@ document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
 });
 
 
+// ==================== LOGIN SYSTEM ====================
+const APP_PASSWORD = 'Raj@9436';
+
+function setupLogin() {
+    const loginModal = document.getElementById('login-modal');
+    const loginBtn = document.getElementById('login-btn');
+    const loginPassword = document.getElementById('login-password');
+    const loginError = document.getElementById('login-error');
+    const mainApp = document.getElementById('main-app');
+
+    // Check if already logged in this session
+    if (sessionStorage.getItem('stockManagerLoggedIn') === 'true') {
+        loginModal.classList.add('hidden');
+        mainApp.style.display = 'block';
+        document.getElementById('bottom-nav-bar').style.display = '';
+        return true;
+    }
+
+    // Login button click
+    loginBtn.addEventListener('click', () => {
+        attemptLogin();
+    });
+
+    // Enter key on password field
+    loginPassword.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') attemptLogin();
+    });
+
+    function attemptLogin() {
+        const pwd = loginPassword.value.trim();
+        if (pwd === APP_PASSWORD) {
+            sessionStorage.setItem('stockManagerLoggedIn', 'true');
+            loginModal.classList.add('hidden');
+            mainApp.style.display = 'block';
+            document.getElementById('bottom-nav-bar').style.display = '';
+            initApp();
+        } else {
+            loginError.textContent = 'Wrong password! Try again.';
+            loginError.style.display = 'block';
+            loginPassword.value = '';
+            loginPassword.focus();
+        }
+    }
+
+    return false;
+}
+
 // ==================== INITIALIZE ====================
-document.addEventListener('DOMContentLoaded', async () => {
-    // Show loading state
+async function initApp() {
     showToast('Connecting to database...', 'info');
-    
-    // Load data from Firebase
     await StockManager.load();
-    
-    // Attach real-time listener for multi-user sync
     StockManager.attachRealtimeListener();
-    
-    // Render UI
     renderStockInTable();
     renderStockOutTable();
     renderSummary();
-    
     showToast('Connected! Real-time sync active.', 'success');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const alreadyLoggedIn = setupLogin();
+    if (alreadyLoggedIn) {
+        initApp();
+    }
 });
