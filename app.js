@@ -1,10 +1,43 @@
-// ==================== DATA STORE ====================
+// ==================== FIREBASE CONFIGURATION ====================
+const firebaseConfig = {
+    apiKey: "AIzaSyCZ2174ywVcOkWq2dQreDHC8MwU_iJkpsc",
+    authDomain: "stock-management-2e0f8.firebaseapp.com",
+    projectId: "stock-management-2e0f8",
+    databaseURL: "https://stock-management-2e0f8-default-rtdb.asia-southeast1.firebasedatabase.app",
+    storageBucket: "stock-management-2e0f8.firebasestorage.app",
+    messagingSenderId: "500168775603",
+    appId: "1:500168775603:web:ba214ea56c4d3cc7feddc6"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ==================== DATA STORE (Firebase Realtime DB) ====================
 const StockManager = {
     items: [],
     stockIn: [],
     stockOut: [],
+    _listenersAttached: false,
 
-    load() {
+    // Load data from Firebase (one-time read, then listeners take over)
+    async load() {
+        try {
+            const snapshot = await db.ref('stockData').once('value');
+            const data = snapshot.val();
+            if (data) {
+                this.items = data.items || [];
+                this.stockIn = data.stockIn || [];
+                this.stockOut = data.stockOut || [];
+            }
+        } catch (e) {
+            console.error('Error loading from Firebase:', e);
+            // Fallback to localStorage
+            this._loadFromLocalStorage();
+        }
+    },
+
+    _loadFromLocalStorage() {
         try {
             const data = localStorage.getItem('stockManagerData');
             if (data) {
@@ -14,22 +47,57 @@ const StockManager = {
                 this.stockOut = parsed.stockOut || [];
             }
         } catch (e) {
-            console.error('Error loading data:', e);
+            console.error('Error loading from localStorage:', e);
         }
     },
 
+
+    // Save data to Firebase
     save() {
         try {
-            localStorage.setItem('stockManagerData', JSON.stringify({
+            const data = {
                 items: this.items,
                 stockIn: this.stockIn,
                 stockOut: this.stockOut
-            }));
+            };
+            db.ref('stockData').set(data).catch(err => {
+                console.error('Firebase save error:', err);
+                showToast('Sync error! Data saved locally.', 'error');
+            });
+            // Also save to localStorage as backup
+            localStorage.setItem('stockManagerData', JSON.stringify(data));
         } catch (e) {
             console.error('Error saving data:', e);
-            showToast('Storage full! Try removing some images.', 'error');
+            showToast('Storage error!', 'error');
         }
     },
+
+    // Attach real-time listener for multi-user sync
+    attachRealtimeListener() {
+        if (this._listenersAttached) return;
+        this._listenersAttached = true;
+
+        db.ref('stockData').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                this.items = data.items || [];
+                this.stockIn = data.stockIn || [];
+                this.stockOut = data.stockOut || [];
+            } else {
+                this.items = [];
+                this.stockIn = [];
+                this.stockOut = [];
+            }
+            // Update all UI components
+            renderStockInTable();
+            renderStockOutTable();
+            renderSummary();
+        }, (error) => {
+            console.error('Realtime listener error:', error);
+            showToast('Connection lost! Working offline.', 'error');
+        });
+    },
+
 
     getCurrentStock(sku) {
         const item = this.items.find(i => i.sku === sku);
@@ -69,34 +137,30 @@ const StockManager = {
 
 // ==================== TAB NAVIGATION ====================
 function switchTab(tabName) {
-    // Update desktop tabs
     document.querySelectorAll('.desktop-tabs .tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.desktop-tabs .tab-btn').forEach(b => {
         if (b.dataset.tab === tabName) b.classList.add('active');
     });
 
-    // Update bottom nav
     document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.bottom-nav-btn').forEach(b => {
         if (b.dataset.tab === tabName) b.classList.add('active');
     });
 
-    // Switch content
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById(tabName).classList.add('active');
 
     if (tabName === 'summary') renderSummary();
 }
 
-// Desktop tabs
 document.querySelectorAll('.desktop-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
-// Bottom nav
 document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
+
 
 // ==================== TOAST NOTIFICATION ====================
 function showToast(message, type = 'success') {
@@ -147,6 +211,7 @@ function setupSKUSuggestion(inputId, suggestionsId, onSelect) {
     });
 }
 
+
 // ==================== IMAGE UPLOAD (Camera + Gallery) ====================
 let currentImageBase64 = '';
 
@@ -156,13 +221,11 @@ const imagePreview = document.getElementById('image-preview');
 const imagePlaceholder = document.getElementById('image-placeholder');
 const removeImageBtn = document.getElementById('remove-image');
 
-// Camera button
 document.getElementById('btn-camera').addEventListener('click', (e) => {
     e.stopPropagation();
     document.getElementById('product-image-camera').click();
 });
 
-// Gallery button
 document.getElementById('btn-gallery').addEventListener('click', (e) => {
     e.stopPropagation();
     productImageInput.removeAttribute('capture');
@@ -191,7 +254,6 @@ function handleImageFile(file) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        // Compress image for localStorage
         compressImage(e.target.result, 300, 0.7, (compressed) => {
             currentImageBase64 = compressed;
             imagePreview.src = compressed;
@@ -203,7 +265,7 @@ function handleImageFile(file) {
     reader.readAsDataURL(file);
 }
 
-// Compress image to avoid localStorage quota issues
+// Compress image to reduce size for Firebase DB storage
 function compressImage(dataUrl, maxWidth, quality, callback) {
     const img = new Image();
     img.onload = () => {
@@ -234,6 +296,7 @@ removeImageBtn.addEventListener('click', (e) => {
     removeImageBtn.classList.remove('visible');
     productImageInput.value = '';
 });
+
 
 // ==================== EXCEL UPLOAD ====================
 let pendingUploadData = null;
@@ -295,35 +358,31 @@ function showPreview(data) {
     }
 }
 
+
 document.getElementById('confirm-upload').addEventListener('click', () => {
     if (!pendingUploadData) return;
 
     let imported = 0;
     let qtyImported = 0;
 
-    // Debug: log first row keys
     console.log('Excel columns detected:', Object.keys(pendingUploadData[0]));
     console.log('First row data:', pendingUploadData[0]);
 
     pendingUploadData.forEach(row => {
-        // Smart column matching - finds value by trying multiple possible header names
         const rowKeys = Object.keys(row);
 
         function getVal(possibleNames) {
-            // Exact match first
             for (const name of possibleNames) {
                 if (row[name] !== undefined && row[name] !== null && String(row[name]).trim() !== '') {
                     return row[name];
                 }
             }
-            // Case-insensitive + trim match
             for (const name of possibleNames) {
                 const found = rowKeys.find(k => k.toLowerCase().trim() === name.toLowerCase().trim());
                 if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== '') {
                     return row[found];
                 }
             }
-            // Partial match (column name contains the keyword)
             for (const name of possibleNames) {
                 const found = rowKeys.find(k => k.toLowerCase().trim().includes(name.toLowerCase().trim()));
                 if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== '') {
@@ -337,21 +396,16 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
         const name = String(getVal(['Product Name', 'product_name', 'Name', 'name', 'Product', 'Item', 'Item Name', 'item_name', 'Description', 'description', 'Title', 'title', 'Product Title'])).trim();
         const category = String(getVal(['Category', 'category', 'Cat', 'Type', 'Group', 'group', 'Section'])).trim();
         
-        // Quantity - try all possible column names
         let rawQty = getVal(['Quantity', 'quantity', 'Qty', 'qty', 'QTY', 'QUANTITY', 'Stock', 'stock', 'STOCK', 'Opening Stock', 'Opening Qty', 'opening_qty', 'Qty.', 'Units', 'units', 'Count', 'count', 'Pcs', 'pcs', 'Nos', 'nos', 'Available', 'available', 'Balance', 'balance', 'In Hand', 'On Hand', 'Opening', 'opening']);
         
-        // If still not found, try to find any numeric column that's not price/sku
         if (rawQty === '') {
             const priceKeys = ['Unit Price', 'unit_price', 'Price', 'price', 'Rate', 'rate', 'MRP', 'mrp', 'Cost', 'cost'];
             const skipKeys = [...priceKeys, 'Sr', 'sr', 'S.No', 'S.no', 'No', 'no', 'Sr.', 'sr.', 'Sl', 'sl'];
             for (const key of rowKeys) {
                 const val = row[key];
                 const keyLower = key.toLowerCase().trim();
-                // Skip if it's a known non-qty field
                 if (skipKeys.some(s => keyLower === s.toLowerCase())) continue;
-                // Skip SKU and Name columns
                 if (keyLower.includes('sku') || keyLower.includes('name') || keyLower.includes('product') || keyLower.includes('category') || keyLower.includes('price') || keyLower.includes('rate') || keyLower.includes('mrp') || keyLower.includes('cost') || keyLower.includes('description') || keyLower.includes('code')) continue;
-                // Check if value is numeric
                 if (val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) > 0) {
                     rawQty = val;
                     console.log(`Auto-detected quantity column: "${key}" = ${val}`);
@@ -360,10 +414,8 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
             }
         }
         
-        // Convert to number - handle text, decimals, commas
         let quantity = 0;
         if (rawQty !== '') {
-            // Remove commas, spaces, and other non-numeric chars except decimal point and minus
             const cleaned = String(rawQty).replace(/[^0-9.\-]/g, '');
             quantity = parseInt(cleaned) || 0;
         }
@@ -409,6 +461,7 @@ document.getElementById('cancel-upload').addEventListener('click', () => {
     document.getElementById('upload-preview').classList.add('hidden');
 });
 
+
 document.getElementById('download-template').addEventListener('click', () => {
     const templateData = [
         { 'SKU': 'SKU-0001', 'Product Name': 'Sample Product 1', 'Category': 'Electronics', 'Quantity': 100, 'Unit Price': 250.00 },
@@ -447,7 +500,6 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
 
     StockManager.save();
     e.target.reset();
-    // Reset image
     currentImageBase64 = '';
     imagePreview.src = '';
     imagePreview.style.display = 'none';
@@ -460,10 +512,10 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
 
 setupSKUSuggestion('new-sku', 'new-sku-suggestions', null);
 
+
 // ==================== STOCK IN ====================
 let inImageBase64 = '';
 
-// Stock In image buttons
 document.getElementById('in-btn-camera').addEventListener('click', (e) => {
     e.stopPropagation();
     document.getElementById('in-product-image-camera').click();
@@ -528,6 +580,7 @@ setupSKUSuggestion('in-sku', 'in-sku-suggestions', (sku) => {
 document.getElementById('in-date').valueAsDate = new Date();
 document.getElementById('out-date').valueAsDate = new Date();
 
+
 document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const sku = document.getElementById('in-sku').value.trim();
@@ -546,7 +599,6 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     e.target.reset();
     document.getElementById('in-date').valueAsDate = new Date();
     document.getElementById('in-product-display').value = '';
-    // Reset in image
     inImageBase64 = '';
     document.getElementById('in-image-preview').src = '';
     document.getElementById('in-image-preview').style.display = 'none';
@@ -574,6 +626,7 @@ function renderStockInTable() {
         </tr>
     `).join('');
 }
+
 
 // ==================== STOCK OUT ====================
 setupSKUSuggestion('out-sku', 'out-sku-suggestions', (sku) => {
@@ -627,6 +680,7 @@ function renderStockOutTable() {
         </tr>
     `).join('');
 }
+
 
 // ==================== SUMMARY ====================
 function renderSummary() {
@@ -712,6 +766,7 @@ function renderSummary() {
 
 document.getElementById('summary-search').addEventListener('input', renderSummary);
 
+
 // ==================== EXPORT TO EXCEL ====================
 document.getElementById('export-summary').addEventListener('click', () => {
     if (StockManager.items.length === 0) {
@@ -734,8 +789,6 @@ document.getElementById('export-summary').addEventListener('click', () => {
 
     try {
         const ws = XLSX.utils.json_to_sheet(exportData);
-
-        // Auto column width
         const colWidths = Object.keys(exportData[0]).map(key => ({
             wch: Math.max(key.length, ...exportData.map(row => String(row[key]).length)) + 2
         }));
@@ -744,7 +797,6 @@ document.getElementById('export-summary').addEventListener('click', () => {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Stock Summary');
 
-        // Add Stock In sheet
         if (StockManager.stockIn.length > 0) {
             const inData = StockManager.stockIn.map(t => ({
                 'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
@@ -754,7 +806,6 @@ document.getElementById('export-summary').addEventListener('click', () => {
             XLSX.utils.book_append_sheet(wb, wsIn, 'Stock In');
         }
 
-        // Add Stock Out sheet
         if (StockManager.stockOut.length > 0) {
             const outData = StockManager.stockOut.map(t => ({
                 'Date': t.date, 'SKU': t.sku, 'Product': t.productName,
@@ -772,6 +823,7 @@ document.getElementById('export-summary').addEventListener('click', () => {
         showToast('Export failed! Try again.', 'error');
     }
 });
+
 
 // ==================== BACKUP ====================
 function createBackup() {
@@ -823,30 +875,8 @@ function createBackup() {
     }
 }
 
-// Backup button
 document.getElementById('backup-now').addEventListener('click', createBackup);
 
-// Auto backup - save backup data in localStorage with timestamp
-function autoBackupToStorage() {
-    try {
-        const backupData = {
-            timestamp: new Date().toISOString(),
-            items: StockManager.items,
-            stockIn: StockManager.stockIn,
-            stockOut: StockManager.stockOut
-        };
-        localStorage.setItem('stockManagerBackup', JSON.stringify(backupData));
-    } catch (e) {
-        console.log('Auto backup skipped - storage full');
-    }
-}
-
-// Run auto backup every time data is saved
-const originalSave = StockManager.save.bind(StockManager);
-StockManager.save = function() {
-    originalSave();
-    autoBackupToStorage();
-};
 
 // ==================== CLEAR ALL DATA ====================
 const CLEAR_PASSWORD = '1234';
@@ -870,7 +900,6 @@ document.getElementById('clear-confirm').addEventListener('click', () => {
         return;
     }
 
-    // Double confirmation
     if (!confirm('Are you SURE? Sab data permanently delete ho jayega! Ye action undo nahi ho sakta.')) {
         return;
     }
@@ -878,17 +907,24 @@ document.getElementById('clear-confirm').addEventListener('click', () => {
     // Create backup before clearing
     createBackup();
 
-    // Clear all data
+    // Clear all data from Firebase
     StockManager.items = [];
     StockManager.stockIn = [];
     StockManager.stockOut = [];
+    
+    // Clear from Firebase DB
+    db.ref('stockData').set({
+        items: [],
+        stockIn: [],
+        stockOut: []
+    });
+
+    // Also clear localStorage
     localStorage.removeItem('stockManagerData');
     localStorage.removeItem('stockManagerBackup');
 
-    // Close modal
     document.getElementById('clear-modal').classList.add('hidden');
 
-    // Refresh UI
     renderStockInTable();
     renderStockOutTable();
     renderSummary();
@@ -896,12 +932,12 @@ document.getElementById('clear-confirm').addEventListener('click', () => {
     showToast('All data cleared! Backup downloaded.', 'success');
 });
 
-// Close modal on outside click
 document.getElementById('clear-modal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('clear-modal')) {
         document.getElementById('clear-modal').classList.add('hidden');
     }
 });
+
 
 // ==================== BULK OPERATIONS ====================
 
@@ -971,6 +1007,7 @@ document.getElementById('bulk-in-upload').addEventListener('change', (e) => {
     reader.readAsArrayBuffer(file);
 });
 
+
 // Bulk Stock Out
 document.getElementById('bulk-out-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -1039,6 +1076,7 @@ document.getElementById('bulk-out-upload').addEventListener('change', (e) => {
     reader.readAsArrayBuffer(file);
 });
 
+
 // Bulk New Stock
 document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -1105,10 +1143,22 @@ document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
     reader.readAsArrayBuffer(file);
 });
 
+
 // ==================== INITIALIZE ====================
-document.addEventListener('DOMContentLoaded', () => {
-    StockManager.load();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Show loading state
+    showToast('Connecting to database...', 'info');
+    
+    // Load data from Firebase
+    await StockManager.load();
+    
+    // Attach real-time listener for multi-user sync
+    StockManager.attachRealtimeListener();
+    
+    // Render UI
     renderStockInTable();
     renderStockOutTable();
     renderSummary();
+    
+    showToast('Connected! Real-time sync active.', 'success');
 });
