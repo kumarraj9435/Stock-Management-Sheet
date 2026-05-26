@@ -826,7 +826,7 @@ function renderSummary() {
     let totalQuantity = 0, totalValue = 0, lowStockCount = 0;
 
     if (filteredItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
     } else {
         tbody.innerHTML = filteredItems.map(item => {
             const totalIn = StockManager.getTotalIn(item.sku);
@@ -853,6 +853,10 @@ function renderSummary() {
                     <td style="color:#ff6b6b;font-weight:600;">-${totalOut}</td>
                     <td class="${stockClass}">${currentStock}</td>
                     <td>&#8377;${value.toFixed(0)}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-edit-item" data-sku="${item.sku}" title="Edit" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 5px;">&#9998;</button>
+                        <button class="btn-delete-item" data-sku="${item.sku}" title="Delete" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 5px;color:#ff6b6b;">&#128465;</button>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -882,6 +886,40 @@ function renderSummary() {
                     reader.readAsDataURL(file);
                 };
                 input.click();
+            });
+        });
+
+        // Edit item handlers
+        document.querySelectorAll('.btn-edit-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const sku = el.dataset.sku;
+                const item = StockManager.items.find(i => i.sku === sku);
+                if (!item) return;
+                document.getElementById('edit-sku-original').value = sku;
+                document.getElementById('edit-sku').value = item.sku;
+                document.getElementById('edit-ean').value = item.ean || '';
+                document.getElementById('edit-name').value = item.name;
+                document.getElementById('edit-category').value = item.category || '';
+                document.getElementById('edit-quantity').value = item.quantity;
+                document.getElementById('edit-price').value = item.price;
+                document.getElementById('edit-location').value = item.location || '';
+                document.getElementById('edit-modal').classList.remove('hidden');
+            });
+        });
+
+        // Delete item handlers
+        document.querySelectorAll('.btn-delete-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const sku = el.dataset.sku;
+                const item = StockManager.items.find(i => i.sku === sku);
+                if (!item) return;
+                const pwd = prompt('Delete karne ke liye password enter karo:');
+                if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
+                if (!confirm(`"${item.name}" (${sku}) delete karna hai? Ye undo nahi hoga!`)) return;
+                StockManager.items = StockManager.items.filter(i => i.sku !== sku);
+                StockManager.save();
+                renderSummary();
+                showToast(`"${item.name}" deleted!`, 'success');
             });
         });
     }
@@ -1347,6 +1385,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+
+// ==================== EDIT ITEM MODAL ====================
+document.getElementById('edit-cancel').addEventListener('click', () => {
+    document.getElementById('edit-modal').classList.add('hidden');
+});
+
+document.getElementById('edit-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('edit-modal')) {
+        document.getElementById('edit-modal').classList.add('hidden');
+    }
+});
+
+document.getElementById('edit-item-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const sku = document.getElementById('edit-sku-original').value;
+    const item = StockManager.items.find(i => i.sku === sku);
+    if (!item) { showToast('Item not found!', 'error'); return; }
+
+    item.name = document.getElementById('edit-name').value.trim();
+    item.ean = document.getElementById('edit-ean').value.trim();
+    item.category = document.getElementById('edit-category').value.trim();
+    item.quantity = parseInt(document.getElementById('edit-quantity').value) || 0;
+    item.price = parseFloat(document.getElementById('edit-price').value) || 0;
+    item.location = document.getElementById('edit-location').value.trim();
+
+    StockManager.save();
+    document.getElementById('edit-modal').classList.add('hidden');
+    renderSummary();
+    showToast(`"${item.name}" updated!`, 'success');
+});
 
 
 // ==================== BARCODE SCANNER ====================
