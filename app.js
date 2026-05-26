@@ -79,6 +79,8 @@ function setupCompanySwitcher() {
     });
 
     addBtn.addEventListener('click', () => {
+        const pwd = prompt('Password enter karo:');
+        if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
         const name = prompt('New company ka naam enter karo:');
         if (!name || !name.trim()) return;
         const id = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
@@ -103,6 +105,8 @@ function setupCompanySwitcher() {
     });
 
     delBtn.addEventListener('click', () => {
+        const pwd = prompt('Password enter karo:');
+        if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
         const select = document.getElementById('company-select');
         if (select.options.length <= 1) {
             showToast('Last company delete nahi kar sakte!', 'error');
