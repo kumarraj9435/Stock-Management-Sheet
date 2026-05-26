@@ -7,7 +7,20 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:#667eea;">StockManager</h3>
+            <p style="margin:10px 0;">Access karne ke liye password enter karo:</p>
+            <input type="password" id="login-password" placeholder="Enter password" class="modal-input" style="letter-spacing:2px;">
+            <p id="login-error" style="color:#ff6b6b;font-size:0.8rem;display:none;margin-top:5px;"></p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="login-btn" style="flex:1;">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="main-app" style="display:none;">
         <header>
             <h1>StockManager</h1>
             <p class="subtitle">Smart Stock Management</p>
@@ -358,7 +371,7 @@
                 <h3>Clear All Data</h3>
                 <p>Ye action sab data permanently delete kar dega!</p>
                 <p style="font-size:0.85rem;color:#666;margin:10px 0;">Pehle backup le lo. Password enter karo:</p>
-                <input type="password" id="clear-password" placeholder="Enter password: 1234" class="modal-input">
+                <input type="password" id="clear-password" placeholder="Enter password" class="modal-input">
                 <p id="clear-error" style="color:#ff6b6b;font-size:0.8rem;display:none;margin-top:5px;"></p>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" id="clear-cancel">Cancel</button>
@@ -369,7 +382,7 @@
     </div>
 
     <!-- Bottom Navigation (Mobile) -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" id="bottom-nav-bar" style="display:none;">
         <button class="bottom-nav-btn active" data-tab="opening-stock">
             <span class="nav-icon">&#128194;</span>
             <span class="nav-label">Upload</span>
