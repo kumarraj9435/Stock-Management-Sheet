@@ -106,6 +106,7 @@
                         <div class="sku-input-wrapper">
                             <input type="text" id="new-sku" placeholder="Enter or generate SKU" autocomplete="off">
                             <button type="button" class="btn-small" id="generate-sku">Auto</button>
+                            <button type="button" class="btn-small btn-barcode" data-target="new-sku" title="Scan Barcode">&#128247;</button>
                             <div class="sku-suggestions" id="new-sku-suggestions"></div>
                         </div>
                     </div>
@@ -175,6 +176,7 @@
                         <label for="in-sku">SKU</label>
                         <div class="sku-input-wrapper">
                             <input type="text" id="in-sku" placeholder="Type SKU to search..." autocomplete="off" required>
+                            <button type="button" class="btn-small btn-barcode" data-target="in-sku" title="Scan Barcode">&#128247;</button>
                             <div class="sku-suggestions" id="in-sku-suggestions"></div>
                         </div>
                     </div>
@@ -261,6 +263,7 @@
                         <label for="out-sku">SKU</label>
                         <div class="sku-input-wrapper">
                             <input type="text" id="out-sku" placeholder="Type SKU to search..." autocomplete="off" required>
+                            <button type="button" class="btn-small btn-barcode" data-target="out-sku" title="Scan Barcode">&#128247;</button>
                             <div class="sku-suggestions" id="out-sku-suggestions"></div>
                         </div>
                     </div>
@@ -415,10 +418,27 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
 
+    <!-- Barcode Scanner Modal -->
+    <div id="barcode-modal" class="modal hidden">
+        <div class="modal-content barcode-modal-content">
+            <h3 style="color:#667eea;margin-bottom:10px;">&#128274; Barcode Scanner</h3>
+            <p style="font-size:0.85rem;color:#666;margin-bottom:12px;">Camera ko barcode pe point karo</p>
+            <div id="barcode-scanner-container">
+                <div id="barcode-reader"></div>
+            </div>
+            <div id="barcode-result" style="margin-top:10px;font-size:0.9rem;color:#667eea;font-weight:700;min-height:24px;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="barcode-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Firebase SDK (Compat version for simplicity) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <!-- Html5-QRCode Barcode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

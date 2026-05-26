@@ -959,3 +959,79 @@ tbody tr:nth-child(even):hover {
 .no-image-thumb.add-image-btn:hover {
     transform: scale(1.15);
 }
+
+
+
+/* ============ BARCODE SCANNER ============ */
+.btn-barcode {
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-barcode:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 184, 148, 0.4);
+}
+
+.barcode-modal-content {
+    max-width: 500px !important;
+    width: 95% !important;
+}
+
+#barcode-scanner-container {
+    width: 100%;
+    min-height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+}
+
+#barcode-reader {
+    width: 100%;
+}
+
+#barcode-reader video {
+    border-radius: 12px;
+}
+
+#barcode-reader__scan_region {
+    min-height: 250px;
+}
+
+#barcode-reader__dashboard {
+    padding: 8px !important;
+}
+
+#barcode-reader__dashboard_section_csr button {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+}
+
+#barcode-reader__dashboard_section_swaplink {
+    color: #667eea !important;
+    text-decoration: underline !important;
+}
+
+.barcode-scan-success {
+    animation: barcodePulse 0.5s ease;
+}
+
+@keyframes barcodePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); background: #d4edda; }
+    100% { transform: scale(1); }
+}
