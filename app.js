@@ -237,7 +237,8 @@ const StockManager = {
         const q = query.toLowerCase();
         return this.items.filter(item =>
             item.sku.toLowerCase().includes(q) ||
-            item.name.toLowerCase().includes(q)
+            item.name.toLowerCase().includes(q) ||
+            (item.ean || '').toLowerCase().includes(q)
         );
     },
 
@@ -545,15 +546,18 @@ document.getElementById('confirm-upload').addEventListener('click', () => {
             price = parseFloat(cleanedPrice) || 0;
         }
 
-        console.log(`Row: SKU=${sku}, Name=${name}, Qty=${quantity}, Price=${price}`);
+        const ean = String(getVal(['EAN', 'ean', 'Barcode', 'barcode', 'BARCODE', 'EAN Code', 'ean_code', 'EAN-13', 'UPC', 'upc', 'GTIN', 'gtin'])).trim();
+
+        console.log(`Row: SKU=${sku}, Name=${name}, Qty=${quantity}, Price=${price}, EAN=${ean}`);
 
         if (sku && name) {
             const existing = StockManager.items.find(i => i.sku === sku);
             if (existing) {
                 existing.quantity += quantity;
+                if (ean) existing.ean = ean;
             } else {
                 StockManager.items.push({
-                    sku, name, category, quantity, price,
+                    sku, name, category, quantity, price, ean,
                     location: '', image: '', dateAdded: new Date().toISOString()
                 });
             }
@@ -582,9 +586,9 @@ document.getElementById('cancel-upload').addEventListener('click', () => {
 
 document.getElementById('download-template').addEventListener('click', () => {
     const templateData = [
-        { 'SKU': 'SKU-0001', 'Product Name': 'Sample Product 1', 'Category': 'Electronics', 'Quantity': 100, 'Unit Price': 250.00 },
-        { 'SKU': 'SKU-0002', 'Product Name': 'Sample Product 2', 'Category': 'Clothing', 'Quantity': 50, 'Unit Price': 499.99 },
-        { 'SKU': 'SKU-0003', 'Product Name': 'Sample Product 3', 'Category': 'Food', 'Quantity': 200, 'Unit Price': 45.00 },
+        { 'SKU': 'SKU-0001', 'Product Name': 'Sample Product 1', 'Category': 'Electronics', 'Quantity': 100, 'Unit Price': 250.00, 'EAN': '8901234567890' },
+        { 'SKU': 'SKU-0002', 'Product Name': 'Sample Product 2', 'Category': 'Clothing', 'Quantity': 50, 'Unit Price': 499.99, 'EAN': '8901234567891' },
+        { 'SKU': 'SKU-0003', 'Product Name': 'Sample Product 3', 'Category': 'Food', 'Quantity': 200, 'Unit Price': 45.00, 'EAN': '8901234567892' },
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
@@ -605,13 +609,14 @@ document.getElementById('new-stock-form').addEventListener('submit', (e) => {
     const category = document.getElementById('new-category').value.trim();
     const quantity = parseInt(document.getElementById('new-quantity').value) || 0;
     const price = parseFloat(document.getElementById('new-price').value) || 0;
+    const ean = document.getElementById('new-ean').value.trim();
     const location = document.getElementById('new-location').value.trim();
 
     if (!sku || !name) { showToast('SKU and Product Name required', 'error'); return; }
     if (StockManager.items.find(i => i.sku === sku)) { showToast('SKU already exists!', 'error'); return; }
 
     StockManager.items.push({
-        sku, name, category, quantity, price, location,
+        sku, name, category, quantity, price, location, ean,
         image: currentImageBase64,
         dateAdded: new Date().toISOString()
     });
@@ -894,6 +899,7 @@ document.getElementById('export-summary').addEventListener('click', () => {
 
     const exportData = StockManager.items.map(item => ({
         'SKU': item.sku,
+        'EAN': item.ean || '',
         'Product Name': item.name,
         'Category': item.category || '',
         'Location': item.location || '',
@@ -1231,6 +1237,7 @@ document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
                 const quantity = parseInt(String(rawQty).replace(/[^0-9]/g, '')) || 0;
                 const rawPrice = getVal(['Unit Price', 'Price', 'Rate', 'MRP', 'Cost']);
                 const price = parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 0;
+                const ean = String(getVal(['EAN', 'ean', 'Barcode', 'barcode', 'BARCODE', 'EAN Code', 'ean_code', 'EAN-13', 'UPC', 'upc', 'GTIN', 'gtin'])).trim();
                 
                 if (!sku || !name) { failed++; return; }
                 
@@ -1239,10 +1246,11 @@ document.getElementById('bulk-new-upload').addEventListener('change', (e) => {
                     existing.quantity += quantity;
                     if (price > 0) existing.price = price;
                     if (category) existing.category = category;
+                    if (ean) existing.ean = ean;
                     updated++;
                 } else {
                     StockManager.items.push({
-                        sku, name, category, quantity, price,
+                        sku, name, category, quantity, price, ean,
                         location: '', image: '', dateAdded: new Date().toISOString()
                     });
                     added++;
@@ -1389,16 +1397,21 @@ function onBarcodeScanSuccess(decodedText, decodedResult) {
     // Fill the target input
     if (barcodeTargetInput) {
         const input = document.getElementById(barcodeTargetInput);
-        if (input) {
-            input.value = decodedText;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.classList.add('barcode-scan-success');
-            setTimeout(() => input.classList.remove('barcode-scan-success'), 600);
+        
+        // Try to find item by SKU or EAN
+        let item = StockManager.items.find(i => i.sku === decodedText);
+        if (!item) {
+            item = StockManager.items.find(i => i.ean && i.ean === decodedText);
         }
 
-        // Auto-fill product name if item exists
-        const item = StockManager.items.find(i => i.sku === decodedText);
         if (item) {
+            // Found by EAN or SKU - fill the SKU value
+            if (input) {
+                input.value = item.sku;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.classList.add('barcode-scan-success');
+                setTimeout(() => input.classList.remove('barcode-scan-success'), 600);
+            }
             if (barcodeTargetInput === 'in-sku') {
                 document.getElementById('in-product-display').value = item.name;
             } else if (barcodeTargetInput === 'out-sku') {
@@ -1407,6 +1420,17 @@ function onBarcodeScanSuccess(decodedText, decodedResult) {
             }
             showToast(`Found: ${item.name} (Stock: ${StockManager.getCurrentStock(item.sku)})`, 'success');
         } else {
+            // Not found - just fill the scanned value as SKU
+            if (input) {
+                input.value = decodedText;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.classList.add('barcode-scan-success');
+                setTimeout(() => input.classList.remove('barcode-scan-success'), 600);
+            }
+            // If on new-sku, also fill EAN field
+            if (barcodeTargetInput === 'new-sku') {
+                document.getElementById('new-ean').value = decodedText;
+            }
             showToast(`Barcode scanned: ${decodedText}`, 'info');
         }
     }
