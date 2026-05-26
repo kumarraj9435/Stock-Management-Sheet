@@ -1333,3 +1333,122 @@ document.addEventListener('DOMContentLoaded', () => {
         initApp();
     }
 });
+
+
+
+// ==================== BARCODE SCANNER ====================
+let html5QrcodeScanner = null;
+let barcodeTargetInput = null;
+
+function openBarcodeScanner(targetInputId) {
+    barcodeTargetInput = targetInputId;
+    const modal = document.getElementById('barcode-modal');
+    const resultDiv = document.getElementById('barcode-result');
+    resultDiv.textContent = '';
+    modal.classList.remove('hidden');
+
+    // Initialize scanner
+    setTimeout(() => {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().catch(() => {});
+        }
+
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "barcode-reader",
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 150 },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.CODE_93,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX,
+                    Html5QrcodeSupportedFormats.CODABAR
+                ]
+            },
+            false
+        );
+
+        html5QrcodeScanner.render(onBarcodeScanSuccess, onBarcodeScanFailure);
+    }, 300);
+}
+
+function onBarcodeScanSuccess(decodedText, decodedResult) {
+    // Barcode successfully scanned
+    const resultDiv = document.getElementById('barcode-result');
+    resultDiv.textContent = `Scanned: ${decodedText}`;
+
+    // Fill the target input
+    if (barcodeTargetInput) {
+        const input = document.getElementById(barcodeTargetInput);
+        if (input) {
+            input.value = decodedText;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.classList.add('barcode-scan-success');
+            setTimeout(() => input.classList.remove('barcode-scan-success'), 600);
+        }
+
+        // Auto-fill product name if item exists
+        const item = StockManager.items.find(i => i.sku === decodedText);
+        if (item) {
+            if (barcodeTargetInput === 'in-sku') {
+                document.getElementById('in-product-display').value = item.name;
+            } else if (barcodeTargetInput === 'out-sku') {
+                document.getElementById('out-product-display').value = item.name;
+                document.getElementById('out-available').value = StockManager.getCurrentStock(item.sku);
+            }
+            showToast(`Found: ${item.name} (Stock: ${StockManager.getCurrentStock(item.sku)})`, 'success');
+        } else {
+            showToast(`Barcode scanned: ${decodedText}`, 'info');
+        }
+    }
+
+    // Close scanner after successful scan
+    closeBarcodeScanner();
+}
+
+function onBarcodeScanFailure(error) {
+    // Scan failure is normal while scanning - no action needed
+}
+
+function closeBarcodeScanner() {
+    const modal = document.getElementById('barcode-modal');
+    modal.classList.add('hidden');
+
+    if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch((err) => {
+            console.log('Scanner clear error:', err);
+        });
+        html5QrcodeScanner = null;
+    }
+}
+
+// Barcode scan button click handlers
+document.querySelectorAll('.btn-barcode').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetId = btn.dataset.target;
+        openBarcodeScanner(targetId);
+    });
+});
+
+// Close barcode modal
+document.getElementById('barcode-cancel').addEventListener('click', () => {
+    closeBarcodeScanner();
+});
+
+// Close on backdrop click
+document.getElementById('barcode-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('barcode-modal')) {
+        closeBarcodeScanner();
+    }
+});
