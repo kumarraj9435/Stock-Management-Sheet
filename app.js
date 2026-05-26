@@ -822,7 +822,7 @@ function renderSummary() {
     let totalQuantity = 0, totalValue = 0, lowStockCount = 0;
 
     if (filteredItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;padding:25px;">No stock items. Add items via Upload or New tab.</td></tr>';
     } else {
         tbody.innerHTML = filteredItems.map(item => {
             const totalIn = StockManager.getTotalIn(item.sku);
@@ -842,6 +842,7 @@ function renderSummary() {
                 <tr>
                     <td>${imgHtml}</td>
                     <td><strong>${item.sku}</strong></td>
+                    <td style="font-size:0.7rem;color:#888;">${item.ean || '-'}</td>
                     <td>${item.name}</td>
                     <td>${item.quantity}</td>
                     <td style="color:#00b894;font-weight:600;">+${totalIn}</td>
