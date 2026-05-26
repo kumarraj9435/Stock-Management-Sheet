@@ -13,6 +13,123 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ==================== COMPANY MANAGEMENT ====================
+let currentCompanyId = '';
+
+async function loadCompanies() {
+    // Migrate old data if exists
+    const oldDataSnapshot = await db.ref('stockData').once('value');
+    const oldData = oldDataSnapshot.val();
+    
+    const snapshot = await db.ref('companies').once('value');
+    let companies = snapshot.val();
+    
+    if (!companies) {
+        // Create default company
+        await db.ref('companies/default').set({ name: 'My Company', createdAt: new Date().toISOString() });
+        // Migrate old data to default company
+        if (oldData) {
+            await db.ref('companies/default/stockData').set(oldData);
+            await db.ref('stockData').remove(); // Clean old location
+        }
+        companies = { default: { name: 'My Company' } };
+    }
+    return companies;
+}
+
+function renderCompanySelector(companies) {
+    const select = document.getElementById('company-select');
+    select.innerHTML = '';
+    Object.keys(companies).forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = companies[id].name;
+        select.appendChild(opt);
+    });
+    // Restore last selected
+    const saved = localStorage.getItem('currentCompanyId');
+    if (saved && companies[saved]) {
+        select.value = saved;
+        currentCompanyId = saved;
+    } else {
+        currentCompanyId = Object.keys(companies)[0];
+        select.value = currentCompanyId;
+    }
+}
+
+function setupCompanySwitcher() {
+    const select = document.getElementById('company-select');
+    const addBtn = document.getElementById('add-company-btn');
+    const delBtn = document.getElementById('delete-company-btn');
+
+    select.addEventListener('change', () => {
+        currentCompanyId = select.value;
+        localStorage.setItem('currentCompanyId', currentCompanyId);
+        // Detach old listener and attach new
+        StockManager._listenersAttached = false;
+        db.ref(`companies/${select.value}/stockData`).off();
+        // Reload for new company
+        StockManager.load().then(() => {
+            StockManager.attachRealtimeListener();
+            renderStockInTable();
+            renderStockOutTable();
+            renderSummary();
+            showToast(`Switched to: ${select.options[select.selectedIndex].text}`, 'info');
+        });
+    });
+
+    addBtn.addEventListener('click', () => {
+        const name = prompt('New company ka naam enter karo:');
+        if (!name || !name.trim()) return;
+        const id = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+        db.ref(`companies/${id}`).set({ name: name.trim(), createdAt: new Date().toISOString() }).then(() => {
+            loadCompanies().then(companies => {
+                renderCompanySelector(companies);
+                // Switch to new company
+                document.getElementById('company-select').value = id;
+                currentCompanyId = id;
+                localStorage.setItem('currentCompanyId', id);
+                StockManager._listenersAttached = false;
+                StockManager.items = [];
+                StockManager.stockIn = [];
+                StockManager.stockOut = [];
+                StockManager.attachRealtimeListener();
+                renderStockInTable();
+                renderStockOutTable();
+                renderSummary();
+                showToast(`"${name.trim()}" company added!`, 'success');
+            });
+        });
+    });
+
+    delBtn.addEventListener('click', () => {
+        const select = document.getElementById('company-select');
+        if (select.options.length <= 1) {
+            showToast('Last company delete nahi kar sakte!', 'error');
+            return;
+        }
+        const name = select.options[select.selectedIndex].text;
+        if (!confirm(`"${name}" company ka SAARA data delete ho jayega! Sure?`)) return;
+        const delId = currentCompanyId;
+        db.ref(`companies/${delId}`).remove().then(() => {
+            loadCompanies().then(companies => {
+                renderCompanySelector(companies);
+                currentCompanyId = Object.keys(companies)[0];
+                select.value = currentCompanyId;
+                localStorage.setItem('currentCompanyId', currentCompanyId);
+                StockManager._listenersAttached = false;
+                StockManager.load().then(() => {
+                    StockManager.attachRealtimeListener();
+                    renderStockInTable();
+                    renderStockOutTable();
+                    renderSummary();
+                    showToast(`"${name}" deleted!`, 'success');
+                });
+            });
+        });
+    });
+}
+
 // ==================== DATA STORE (Firebase Realtime DB) ====================
 const StockManager = {
     items: [],
@@ -20,19 +137,22 @@ const StockManager = {
     stockOut: [],
     _listenersAttached: false,
 
-    // Load data from Firebase (one-time read, then listeners take over)
+    // Load data from Firebase for current company
     async load() {
         try {
-            const snapshot = await db.ref('stockData').once('value');
+            const snapshot = await db.ref(`companies/${currentCompanyId}/stockData`).once('value');
             const data = snapshot.val();
             if (data) {
                 this.items = data.items || [];
                 this.stockIn = data.stockIn || [];
                 this.stockOut = data.stockOut || [];
+            } else {
+                this.items = [];
+                this.stockIn = [];
+                this.stockOut = [];
             }
         } catch (e) {
             console.error('Error loading from Firebase:', e);
-            // Fallback to localStorage
             this._loadFromLocalStorage();
         }
     },
@@ -52,7 +172,7 @@ const StockManager = {
     },
 
 
-    // Save data to Firebase
+    // Save data to Firebase for current company
     save() {
         try {
             const data = {
@@ -60,11 +180,10 @@ const StockManager = {
                 stockIn: this.stockIn,
                 stockOut: this.stockOut
             };
-            db.ref('stockData').set(data).catch(err => {
+            db.ref(`companies/${currentCompanyId}/stockData`).set(data).catch(err => {
                 console.error('Firebase save error:', err);
                 showToast('Sync error! Data saved locally.', 'error');
             });
-            // Also save to localStorage as backup
             localStorage.setItem('stockManagerData', JSON.stringify(data));
         } catch (e) {
             console.error('Error saving data:', e);
@@ -72,12 +191,12 @@ const StockManager = {
         }
     },
 
-    // Attach real-time listener for multi-user sync
+    // Attach real-time listener for current company
     attachRealtimeListener() {
         if (this._listenersAttached) return;
         this._listenersAttached = true;
 
-        db.ref('stockData').on('value', (snapshot) => {
+        db.ref(`companies/${currentCompanyId}/stockData`).on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 this.items = data.items || [];
@@ -88,7 +207,6 @@ const StockManager = {
                 this.stockIn = [];
                 this.stockOut = [];
             }
-            // Update all UI components
             renderStockInTable();
             renderStockOutTable();
             renderSummary();
@@ -912,8 +1030,8 @@ document.getElementById('clear-confirm').addEventListener('click', () => {
     StockManager.stockIn = [];
     StockManager.stockOut = [];
     
-    // Clear from Firebase DB
-    db.ref('stockData').set({
+    // Clear from Firebase DB for current company
+    db.ref(`companies/${currentCompanyId}/stockData`).set({
         items: [],
         stockIn: [],
         stockOut: []
@@ -1194,6 +1312,13 @@ function setupLogin() {
 // ==================== INITIALIZE ====================
 async function initApp() {
     showToast('Connecting to database...', 'info');
+    
+    // Load companies and setup switcher
+    const companies = await loadCompanies();
+    renderCompanySelector(companies);
+    setupCompanySwitcher();
+    
+    // Load data for current company
     await StockManager.load();
     StockManager.attachRealtimeListener();
     renderStockInTable();
