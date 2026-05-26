@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockManager - Complete Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.8; color: #333; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        h1 { text-align: center; color: #667eea; font-size: 2.5rem; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 40px; font-size: 1.1rem; }
+        h2 { color: #2c3e50; border-bottom: 3px solid #667eea; padding-bottom: 8px; margin: 35px 0 15px; font-size: 1.5rem; }
+        h3 { color: #764ba2; margin: 20px 0 10px; }
+        p { margin: 10px 0; }
+        .section { background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 20px 0; border-left: 4px solid #667eea; }
+        .warning { background: #fff3cd; border-left-color: #ffc107; }
+        .success { background: #d4edda; border-left-color: #28a745; }
+        .danger { background: #f8d7da; border-left-color: #dc3545; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #dee2e6; padding: 10px 14px; text-align: left; }
+        th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        code { background: #e9ecef; padding: 2px 8px; border-radius: 4px; font-family: monospace; color: #d63384; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
+        .badge-free { background: #d4edda; color: #155724; }
+        .badge-limit { background: #fff3cd; color: #856404; }
+        ul { margin: 10px 0 10px 25px; }
+        li { margin: 5px 0; }
+        .page-break { page-break-before: always; }
+        .toc { background: white; border: 2px solid #667eea; border-radius: 12px; padding: 25px; margin: 20px 0; }
+        .toc a { color: #667eea; text-decoration: none; display: block; padding: 5px 0; }
+        .toc a:hover { text-decoration: underline; }
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .feature-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; }
+        .feature-card h4 { color: #667eea; margin-bottom: 5px; }
+        @media print { .no-print { display: none; } body { padding: 20px; } }
+        .password-box { background: #2c3e50; color: #00ff88; padding: 15px 20px; border-radius: 8px; font-family: monospace; font-size: 1.1rem; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<h1>StockManager App</h1>
+<p class="subtitle">Complete Documentation & User Guide | Version 2.0</p>
+<p style="text-align:center;color:#999;">Created: May 2026 | Developer: Raj Kumar</p>
+
+<div class="toc">
+    <h3>Table of Contents</h3>
+    <a href="#overview">1. App Overview</a>
+    <a href="#tech">2. Technology Stack</a>
+    <a href="#firebase">3. Firebase Configuration & Limits</a>
+    <a href="#features">4. Features List</a>
+    <a href="#passwords">5. Passwords & Security</a>
+    <a href="#company">6. Multi-Company Management</a>
+    <a href="#barcode">7. Barcode Scanner</a>
+    <a href="#howto">8. How to Use (Step by Step)</a>
+    <a href="#structure">9. File Structure</a>
+    <a href="#hosting">10. Hosting & Deployment</a>
+    <a href="#limits">11. Firebase FREE Plan Limits</a>
+</div>
+
+<h2 id="overview">1. App Overview</h2>
+<div class="section">
+    <p><strong>StockManager</strong> ek web-based stock/inventory management application hai jo Firebase Realtime Database use karti hai. Ye 100% FREE hai aur multiple companies ka stock manage kar sakti hai.</p>
+    <p><strong>Live URL:</strong> <code>https://kumarraj9435.github.io/Stock-Management-Sheet/</code></p>
+    <p><strong>Repository:</strong> <code>https://github.com/kumarraj9435/Stock-Management-Sheet</code></p>
+</div>
+
+<h2 id="tech">2. Technology Stack</h2>
+<table>
+    <tr><th>Technology</th><th>Purpose</th><th>Version</th></tr>
+    <tr><td>HTML5</td><td>App structure & UI</td><td>-</td></tr>
+    <tr><td>CSS3</td><td>Styling & responsive design</td><td>-</td></tr>
+    <tr><td>JavaScript (Vanilla)</td><td>App logic & Firebase integration</td><td>ES6+</td></tr>
+    <tr><td>Firebase Realtime Database</td><td>Cloud database (shared data)</td><td>v10.12.0</td></tr>
+    <tr><td>SheetJS (XLSX)</td><td>Excel import/export</td><td>v0.18.5</td></tr>
+    <tr><td>GitHub Pages</td><td>Free hosting</td><td>-</td></tr>
+    <tr><td>html5-qrcode</td><td>Barcode scanning via camera</td><td>v2.3.8</td></tr>
+</table>
+
+<h2 id="firebase">3. Firebase Configuration</h2>
+<div class="section">
+    <h3>Firebase Project Details</h3>
+    <table>
+        <tr><th>Setting</th><th>Value</th></tr>
+        <tr><td>Project ID</td><td><code>stock-management-2e0f8</code></td></tr>
+        <tr><td>Database URL</td><td><code>https://stock-management-2e0f8-default-rtdb.asia-southeast1.firebasedatabase.app</code></td></tr>
+        <tr><td>Auth Domain</td><td><code>stock-management-2e0f8.firebaseapp.com</code></td></tr>
+        <tr><td>Plan</td><td><span class="badge badge-free">Spark (FREE)</span></td></tr>
+        <tr><td>Region</td><td>Asia Southeast 1</td></tr>
+    </table>
+</div>
+
+<div class="section warning">
+    <h3>Firebase Database Rules (Required)</h3>
+    <p>Firebase Console → Realtime Database → Rules mein ye set karo:</p>
+    <pre><code>{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</code></pre>
+</div>
+
+<h2 id="features">4. Features List</h2>
+<div class="feature-grid">
+    <div class="feature-card">
+        <h4>Opening Stock Upload</h4>
+        <p>Excel file (.xlsx/.csv) se bulk stock import with smart column detection</p>
+    </div>
+    <div class="feature-card">
+        <h4>Add New Stock</h4>
+        <p>Manual item add with SKU auto-generate, image upload (camera/gallery)</p>
+    </div>
+    <div class="feature-card">
+        <h4>Stock In</h4>
+        <p>Incoming stock record with supplier, date, photo attachment</p>
+    </div>
+    <div class="feature-card">
+        <h4>Stock Out</h4>
+        <p>Outgoing stock with customer name, available stock check</p>
+    </div>
+    <div class="feature-card">
+        <h4>Summary Dashboard</h4>
+        <p>Total items, quantity, value, low stock alerts, search</p>
+    </div>
+    <div class="feature-card">
+        <h4>Multi-Company</h4>
+        <p>Multiple companies ka alag-alag stock manage karo</p>
+    </div>
+    <div class="feature-card">
+        <h4>Barcode Scanner</h4>
+        <p>Camera se barcode scan → auto SKU fill</p>
+    </div>
+    <div class="feature-card">
+        <h4>Export & Backup</h4>
+        <p>Excel export (multi-sheet), backup download</p>
+    </div>
+    <div class="feature-card">
+        <h4>Real-time Sync</h4>
+        <p>Multiple users same data dekh sakte hain instantly</p>
+    </div>
+    <div class="feature-card">
+        <h4>Password Protection</h4>
+        <p>App open + Clear All dono password protected</p>
+    </div>
+    <div class="feature-card">
+        <h4>Images as Base64</h4>
+        <p>Images directly database mein (no Storage needed)</p>
+    </div>
+    <div class="feature-card">
+        <h4>Responsive Design</h4>
+        <p>Mobile + Desktop dono pe perfectly kaam kare</p>
+    </div>
+</div>
+
+<h2 id="passwords">5. Passwords & Security</h2>
+<div class="section danger">
+    <h3>App Passwords</h3>
+    <table>
+        <tr><th>Action</th><th>Password</th><th>Timeout</th></tr>
+        <tr><td>App Open (Login)</td><td><div class="password-box">Raj@9436</div></td><td>20 minutes (auto-expire)</td></tr>
+        <tr><td>Clear All Data</td><td><div class="password-box">Raj@9435</div></td><td>No timeout</td></tr>
+    </table>
+    <p><strong>Note:</strong> Login ke 20 minute baad automatic logout ho jayega aur dobara password maangega.</p>
+</div>
+
+<h2 id="company">6. Multi-Company Management</h2>
+<div class="section">
+    <h3>Kaise kaam karta hai:</h3>
+    <ul>
+        <li>Header mein <strong>dropdown</strong> se company select karo</li>
+        <li><strong>"+ Add"</strong> button se nayi company add karo</li>
+        <li><strong>"Del"</strong> button se company delete karo (with all data)</li>
+        <li>Har company ka data <strong>bilkul alag</strong> Firebase mein store hota hai</li>
+        <li>Last selected company <strong>yaad</strong> rehti hai</li>
+    </ul>
+    <h3>Firebase Data Structure:</h3>
+    <pre><code>companies/
+  ├── default/
+  │   ├── name: "My Company"
+  │   └── stockData/
+  │       ├── items: [...]
+  │       ├── stockIn: [...]
+  │       └── stockOut: [...]
+  ├── company_2/
+  │   ├── name: "ABC Corp"
+  │   └── stockData/
+  │       ├── items: [...]
+  │       ├── stockIn: [...]
+  │       └── stockOut: [...]
+  └── company_3/
+      └── ...</code></pre>
+</div>
+
+<h2 id="barcode">7. Barcode Scanner</h2>
+<div class="section success">
+    <h3>Supported Formats:</h3>
+    <ul>
+        <li>EAN-13, EAN-8</li>
+        <li>UPC-A, UPC-E</li>
+        <li>Code 128, Code 39</li>
+        <li>QR Code</li>
+        <li>ITF, Codabar</li>
+    </ul>
+    <h3>Kaise use kare:</h3>
+    <ol>
+        <li>New Stock / Stock In / Stock Out tab mein jao</li>
+        <li>SKU field ke paas <strong>camera icon</strong> pe click karo</li>
+        <li>Camera khulega - barcode ke saamne rakho</li>
+        <li>Scan hote hi <strong>SKU auto-fill</strong> ho jayega</li>
+        <li>Agar item database mein hai toh product name bhi auto-fill</li>
+    </ol>
+    <p><strong>Note:</strong> HTTPS required hai barcode scanning ke liye (GitHub Pages pe already HTTPS hai).</p>
+</div>
+
+<h2 id="howto">8. How to Use (Step by Step)</h2>
+
+<h3>Step 1: App Open Karo</h3>
+<p>Browser mein <code>https://kumarraj9435.github.io/Stock-Management-Sheet/</code> kholo</p>
+
+<h3>Step 2: Password Daalo</h3>
+<p>Login screen aayegi → Password <code>Raj@9436</code> daalo → Login</p>
+
+<h3>Step 3: Company Select Karo</h3>
+<p>Header mein dropdown se company choose karo ya "+ Add" se nayi banao</p>
+
+<h3>Step 4: Stock Add Karo</h3>
+<ul>
+    <li><strong>Upload Tab:</strong> Excel file se bulk import</li>
+    <li><strong>New Tab:</strong> Manually ek-ek item add karo</li>
+</ul>
+
+<h3>Step 5: Stock In/Out Record Karo</h3>
+<ul>
+    <li><strong>Stock In:</strong> Jab maal aaye (supplier se)</li>
+    <li><strong>Stock Out:</strong> Jab maal jaaye (customer ko)</li>
+</ul>
+
+<h3>Step 6: Summary Dekho</h3>
+<p>Summary tab mein total items, value, low stock alerts sab dikhta hai</p>
+
+<h3>Step 7: Export/Backup</h3>
+<p>Summary tab mein "Export to Excel" ya "Backup Now" button use karo</p>
+
+<h2 id="structure">9. File Structure</h2>
+<div class="section">
+<pre><code>Stock-Management-Sheet/
+├── index.html          → Main app HTML (UI structure)
+├── app.js              → Complete JavaScript logic
+│                         (Firebase, companies, login, 
+│                          all features)
+├── styles.css          → All CSS styling
+├── documentation.html  → This documentation file
+├── README.md           → GitHub readme
+└── .gitignore          → Git ignore rules</code></pre>
+</div>
+
+<h2 id="hosting">10. Hosting & Deployment</h2>
+<div class="section">
+    <h3>Current Hosting: GitHub Pages (FREE)</h3>
+    <table>
+        <tr><th>Step</th><th>Action</th></tr>
+        <tr><td>1</td><td>GitHub repo mein code push karo</td></tr>
+        <tr><td>2</td><td>Settings → Pages → Branch: main, Folder: / (root)</td></tr>
+        <tr><td>3</td><td>Save karo → 2-3 min mein live</td></tr>
+    </table>
+    <h3>Duplicate Project Banane ke liye:</h3>
+    <ol>
+        <li>ZIP download karo: <code>https://github.com/kumarraj9435/Stock-Management-Sheet/archive/refs/heads/main.zip</code></li>
+        <li>Naya GitHub repo banao</li>
+        <li>Files upload karo</li>
+        <li>GitHub Pages enable karo</li>
+        <li><strong>Important:</strong> Naye project ke liye naya Firebase project banao (ya same use karo)</li>
+    </ol>
+</div>
+
+<h2 id="limits">11. Firebase FREE Plan (Spark) Limits</h2>
+<div class="section warning">
+    <table>
+        <tr><th>Resource</th><th>FREE Limit</th><th>Status</th></tr>
+        <tr><td>Database Storage</td><td>1 GB</td><td><span class="badge badge-free">Enough</span></td></tr>
+        <tr><td>Database Downloads</td><td>10 GB/month</td><td><span class="badge badge-free">Enough</span></td></tr>
+        <tr><td>Simultaneous Connections</td><td>100</td><td><span class="badge badge-free">Enough</span></td></tr>
+        <tr><td>Writes per second</td><td>1000</td><td><span class="badge badge-free">Enough</span></td></tr>
+        <tr><td>Firebase Storage</td><td>Not Used</td><td><span class="badge badge-free">N/A</span></td></tr>
+    </table>
+    <h3>Tips to stay within limits:</h3>
+    <ul>
+        <li>Images compress hoti hain (300px, 70% quality) → ~10-30KB per image</li>
+        <li>1GB storage mein approximately <strong>10,000+ items with images</strong> store ho sakte hain</li>
+        <li>Agar images nahi use karo toh <strong>50,000+ items</strong> easily</li>
+        <li>Monthly 10GB download limit → normal use mein kabhi nahi bharta</li>
+    </ul>
+</div>
+
+<div class="section" style="text-align:center;margin-top:40px;">
+    <h3>PDF Banane ke liye:</h3>
+    <p><strong>Ctrl + P</strong> (Print) dabao → Destination mein <strong>"Save as PDF"</strong> select karo → Save!</p>
+    <p style="color:#999;margin-top:20px;">Document generated by Kiro AI | May 2026</p>
+</div>
+
+</body>
+</html>
