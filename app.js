@@ -2341,6 +2341,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
 
     const sku = document.getElementById('sheet-in-sku-input')?.value.trim();
     const qty = document.getElementById('sheet-in-qty-input')?.value.trim();
+    const invoice = document.getElementById('sheet-in-invoice-input')?.value.trim();
     const notes = document.getElementById('sheet-in-notes-input')?.value.trim();
 
     if (!sku || !qty) { showToast('EAN/SKU aur Qty dono required hai!', 'error'); return; }
@@ -2354,6 +2355,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
         const lower = h.toLowerCase();
         if (lower.includes('ean') || lower.includes('barcode') || lower.includes('sku')) rowData[h] = sku;
         else if (lower.includes('qty') || lower.includes('quantity') || lower.includes('stock') || lower.includes('pcs') || lower.includes('units')) rowData[h] = parseInt(qty) || 0;
+        else if (lower.includes('invoice') || lower.includes('inv') || lower.includes('bill')) rowData[h] = invoice;
         else if (lower.includes('date')) rowData[h] = today;
         else if (lower.includes('source') || lower.includes('notes') || lower.includes('remark') || lower.includes('from')) rowData[h] = notes;
     });
@@ -2363,7 +2365,8 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
         if (headers[0]) rowData[headers[0]] = sku;
         if (headers[1]) rowData[headers[1]] = parseInt(qty) || 0;
         if (headers[2]) rowData[headers[2]] = today;
-        if (headers[3]) rowData[headers[3]] = notes;
+        if (headers[3]) rowData[headers[3]] = invoice;
+        if (headers[4]) rowData[headers[4]] = notes;
     }
 
     showToast('Adding entry...', 'info');
@@ -2378,6 +2381,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
             showToast('Entry added to ' + sheetName + '!', 'success');
             document.getElementById('sheet-in-sku-input').value = '';
             document.getElementById('sheet-in-qty-input').value = '';
+            document.getElementById('sheet-in-invoice-input').value = '';
             document.getElementById('sheet-in-notes-input').value = '';
             // Reload sheet data
             SheetInOut.loadSheet(sheetName, 'in');
@@ -2567,6 +2571,15 @@ SheetSKUAutoSuggest.setupAutoSuggest('in-sku', 'in-sheet-sku-suggestions', (sku,
     const localItem = StockManager.items.find(i => i.sku === sku);
     if (localItem) {
         document.getElementById('in-product-display').value = localItem.name;
+    }
+});
+
+// Setup auto-suggest for Sheet Stock In EAN/SKU entry field
+SheetSKUAutoSuggest.setupAutoSuggest('sheet-in-sku-input', 'sheet-in-sku-suggestions', (sku, name, ean) => {
+    // Fill SKU/EAN in the input (prefer EAN if available, else SKU)
+    const input = document.getElementById('sheet-in-sku-input');
+    if (input) {
+        input.value = ean || sku;
     }
 });
 

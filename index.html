@@ -284,11 +284,17 @@
                 </div>
                 <div class="sheet-entry-form" style="margin-bottom:12px;padding:12px;background:#e8f8f5;border-radius:10px;border:1px solid #00b894;">
                     <div class="form-row" style="margin-bottom:8px;">
-                        <div class="form-group" style="flex:1;">
-                            <input type="text" id="sheet-in-sku-input" placeholder="EAN / SKU" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                        <div class="form-group" style="flex:1;position:relative;">
+                            <input type="text" id="sheet-in-sku-input" placeholder="EAN / SKU" autocomplete="off" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                            <div class="sku-suggestions sheet-sku-suggestions" id="sheet-in-sku-suggestions"></div>
                         </div>
                         <div class="form-group" style="flex:1;">
                             <input type="number" id="sheet-in-qty-input" placeholder="Qty" min="1" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:8px;">
+                        <div class="form-group" style="flex:1;">
+                            <input type="text" id="sheet-in-invoice-input" placeholder="Invoice No." style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
                         </div>
                         <div class="form-group" style="flex:1;">
                             <input type="text" id="sheet-in-notes-input" placeholder="Notes/Source" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
