@@ -2325,3 +2325,117 @@ document.getElementById('sheet-in-search')?.addEventListener('input', (e) => {
 document.getElementById('sheet-out-search')?.addEventListener('input', (e) => {
     SheetInOut.filter('out', e.target.value.trim());
 });
+
+
+
+// ==================== SHEET IN/OUT ADD ENTRY BUTTONS ====================
+
+// Add Entry to In Sheet
+document.getElementById('sheet-in-add-entry')?.addEventListener('click', async () => {
+    const sheetName = document.getElementById('sheet-in-select')?.value;
+    if (!sheetName) { showToast('Pehle sheet select karo!', 'error'); return; }
+
+    const sku = document.getElementById('sheet-in-sku-input')?.value.trim();
+    const qty = document.getElementById('sheet-in-qty-input')?.value.trim();
+    const notes = document.getElementById('sheet-in-notes-input')?.value.trim();
+
+    if (!sku || !qty) { showToast('EAN/SKU aur Qty dono required hai!', 'error'); return; }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const rowData = {};
+
+    // Map to sheet headers
+    const headers = SheetInOut.inHeaders;
+    headers.forEach(h => {
+        const lower = h.toLowerCase();
+        if (lower.includes('ean') || lower.includes('barcode') || lower.includes('sku')) rowData[h] = sku;
+        else if (lower.includes('qty') || lower.includes('quantity') || lower.includes('stock') || lower.includes('pcs') || lower.includes('units')) rowData[h] = parseInt(qty) || 0;
+        else if (lower.includes('date')) rowData[h] = today;
+        else if (lower.includes('source') || lower.includes('notes') || lower.includes('remark') || lower.includes('from')) rowData[h] = notes;
+    });
+
+    // If no header matched for SKU, put in first column
+    if (Object.keys(rowData).length === 0 || !Object.values(rowData).some(v => v === sku)) {
+        if (headers[0]) rowData[headers[0]] = sku;
+        if (headers[1]) rowData[headers[1]] = parseInt(qty) || 0;
+        if (headers[2]) rowData[headers[2]] = today;
+        if (headers[3]) rowData[headers[3]] = notes;
+    }
+
+    showToast('Adding entry...', 'info');
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'add', sheet: sheetName, rowData: rowData })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('Entry added to ' + sheetName + '!', 'success');
+            document.getElementById('sheet-in-sku-input').value = '';
+            document.getElementById('sheet-in-qty-input').value = '';
+            document.getElementById('sheet-in-notes-input').value = '';
+            // Reload sheet data
+            SheetInOut.loadSheet(sheetName, 'in');
+        } else {
+            showToast('Failed: ' + (result.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+});
+
+// Add Entry to Out Sheet
+document.getElementById('sheet-out-add-entry')?.addEventListener('click', async () => {
+    const sheetName = document.getElementById('sheet-out-select')?.value;
+    if (!sheetName) { showToast('Pehle sheet select karo!', 'error'); return; }
+
+    const sku = document.getElementById('sheet-out-sku-input')?.value.trim();
+    const qty = document.getElementById('sheet-out-qty-input')?.value.trim();
+    const notes = document.getElementById('sheet-out-notes-input')?.value.trim();
+
+    if (!sku || !qty) { showToast('EAN/SKU aur Qty dono required hai!', 'error'); return; }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const rowData = {};
+
+    // Map to sheet headers
+    const headers = SheetInOut.outHeaders;
+    headers.forEach(h => {
+        const lower = h.toLowerCase();
+        if (lower.includes('ean') || lower.includes('barcode') || lower.includes('sku')) rowData[h] = sku;
+        else if (lower.includes('qty') || lower.includes('quantity') || lower.includes('stock') || lower.includes('pcs') || lower.includes('units')) rowData[h] = parseInt(qty) || 0;
+        else if (lower.includes('date')) rowData[h] = today;
+        else if (lower.includes('destination') || lower.includes('customer') || lower.includes('notes') || lower.includes('remark') || lower.includes('to') || lower.includes('portal')) rowData[h] = notes;
+    });
+
+    // If no header matched for SKU, put in first column
+    if (Object.keys(rowData).length === 0 || !Object.values(rowData).some(v => v === sku)) {
+        if (headers[0]) rowData[headers[0]] = sku;
+        if (headers[1]) rowData[headers[1]] = parseInt(qty) || 0;
+        if (headers[2]) rowData[headers[2]] = today;
+        if (headers[3]) rowData[headers[3]] = notes;
+    }
+
+    showToast('Adding entry...', 'info');
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'add', sheet: sheetName, rowData: rowData })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('Entry added to ' + sheetName + '!', 'success');
+            document.getElementById('sheet-out-sku-input').value = '';
+            document.getElementById('sheet-out-qty-input').value = '';
+            document.getElementById('sheet-out-notes-input').value = '';
+            // Reload sheet data
+            SheetInOut.loadSheet(sheetName, 'out');
+        } else {
+            showToast('Failed: ' + (result.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+});
