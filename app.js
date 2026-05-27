@@ -2341,6 +2341,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
 
     const sku = document.getElementById('sheet-in-sku-input')?.value.trim();
     const qty = document.getElementById('sheet-in-qty-input')?.value.trim();
+    const invoice = document.getElementById('sheet-in-invoice-input')?.value.trim();
     const notes = document.getElementById('sheet-in-notes-input')?.value.trim();
 
     if (!sku || !qty) { showToast('EAN/SKU aur Qty dono required hai!', 'error'); return; }
@@ -2354,6 +2355,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
         const lower = h.toLowerCase();
         if (lower.includes('ean') || lower.includes('barcode') || lower.includes('sku')) rowData[h] = sku;
         else if (lower.includes('qty') || lower.includes('quantity') || lower.includes('stock') || lower.includes('pcs') || lower.includes('units')) rowData[h] = parseInt(qty) || 0;
+        else if (lower.includes('invoice') || lower.includes('inv')) rowData[h] = invoice;
         else if (lower.includes('date')) rowData[h] = today;
         else if (lower.includes('source') || lower.includes('notes') || lower.includes('remark') || lower.includes('from')) rowData[h] = notes;
     });
@@ -2363,7 +2365,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
         if (headers[0]) rowData[headers[0]] = sku;
         if (headers[1]) rowData[headers[1]] = parseInt(qty) || 0;
         if (headers[2]) rowData[headers[2]] = today;
-        if (headers[3]) rowData[headers[3]] = notes;
+        if (headers[3]) rowData[headers[3]] = invoice || notes;
     }
 
     showToast('Adding entry...', 'info');
@@ -2378,6 +2380,7 @@ document.getElementById('sheet-in-add-entry')?.addEventListener('click', async (
             showToast('Entry added to ' + sheetName + '!', 'success');
             document.getElementById('sheet-in-sku-input').value = '';
             document.getElementById('sheet-in-qty-input').value = '';
+            document.getElementById('sheet-in-invoice-input').value = '';
             document.getElementById('sheet-in-notes-input').value = '';
             // Reload sheet data
             SheetInOut.loadSheet(sheetName, 'in');
@@ -2396,6 +2399,7 @@ document.getElementById('sheet-out-add-entry')?.addEventListener('click', async 
 
     const sku = document.getElementById('sheet-out-sku-input')?.value.trim();
     const qty = document.getElementById('sheet-out-qty-input')?.value.trim();
+    const invoice = document.getElementById('sheet-out-invoice-input')?.value.trim();
     const notes = document.getElementById('sheet-out-notes-input')?.value.trim();
 
     if (!sku || !qty) { showToast('EAN/SKU aur Qty dono required hai!', 'error'); return; }
@@ -2409,6 +2413,7 @@ document.getElementById('sheet-out-add-entry')?.addEventListener('click', async 
         const lower = h.toLowerCase();
         if (lower.includes('ean') || lower.includes('barcode') || lower.includes('sku')) rowData[h] = sku;
         else if (lower.includes('qty') || lower.includes('quantity') || lower.includes('stock') || lower.includes('pcs') || lower.includes('units')) rowData[h] = parseInt(qty) || 0;
+        else if (lower.includes('invoice') || lower.includes('inv')) rowData[h] = invoice;
         else if (lower.includes('date')) rowData[h] = today;
         else if (lower.includes('destination') || lower.includes('customer') || lower.includes('notes') || lower.includes('remark') || lower.includes('to') || lower.includes('portal')) rowData[h] = notes;
     });
@@ -2418,7 +2423,7 @@ document.getElementById('sheet-out-add-entry')?.addEventListener('click', async 
         if (headers[0]) rowData[headers[0]] = sku;
         if (headers[1]) rowData[headers[1]] = parseInt(qty) || 0;
         if (headers[2]) rowData[headers[2]] = today;
-        if (headers[3]) rowData[headers[3]] = notes;
+        if (headers[3]) rowData[headers[3]] = invoice || notes;
     }
 
     showToast('Adding entry...', 'info');
@@ -2433,6 +2438,7 @@ document.getElementById('sheet-out-add-entry')?.addEventListener('click', async 
             showToast('Entry added to ' + sheetName + '!', 'success');
             document.getElementById('sheet-out-sku-input').value = '';
             document.getElementById('sheet-out-qty-input').value = '';
+            document.getElementById('sheet-out-invoice-input').value = '';
             document.getElementById('sheet-out-notes-input').value = '';
             // Reload sheet data
             SheetInOut.loadSheet(sheetName, 'out');
@@ -2455,10 +2461,16 @@ const SheetSKUAutoSuggest = {
     isLoading: false,
     lastFetched: null,
 
-    // Fetch SKU list from Google Sheet
+    // Fetch SKU list from Google Sheet (tries API first, then falls back to LiveStock data)
     async fetchSKUList() {
         if (this.isLoading) return;
         if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') return;
+
+        // Fallback: If LiveStock already has Master Sheet data, use it directly
+        if (LiveStock.allSheetsData && LiveStock.allSheetsData['Master Sheet 2026']) {
+            this._extractFromLiveStock();
+            if (this.skuList.length > 0) return;
+        }
 
         this.isLoading = true;
         try {
@@ -2471,12 +2483,47 @@ const SheetSKUAutoSuggest = {
                 this.lastFetched = new Date();
                 console.log(`[SheetSKU] Loaded ${this.skuList.length} SKUs from Master Sheet 2026`);
             } else {
-                console.error('[SheetSKU] Error:', result.error);
+                console.error('[SheetSKU] API Error, trying fallback:', result.error);
+                this._extractFromLiveStock();
             }
         } catch (error) {
-            console.error('[SheetSKU] Fetch failed:', error);
+            console.error('[SheetSKU] Fetch failed, trying fallback:', error);
+            this._extractFromLiveStock();
         } finally {
             this.isLoading = false;
+        }
+    },
+
+    // Fallback: Extract SKU list from LiveStock data (already loaded via readAll)
+    _extractFromLiveStock() {
+        const masterSheet = LiveStock.allSheetsData['Master Sheet 2026'] || LiveStock.allSheetsData[Object.keys(LiveStock.allSheetsData).find(k => k.includes('Master')) || ''];
+        if (!masterSheet || !masterSheet.data || masterSheet.data.length === 0) return;
+
+        const headers = masterSheet.headers || [];
+        const data = masterSheet.data || [];
+
+        const skuColKey = headers.find(h => h.toLowerCase().includes('master sku')) || headers.find(h => h.toLowerCase() === 'sku') || '';
+        const nameColKey = headers.find(h => h.toLowerCase().includes('product name') || h.toLowerCase() === 'name') || '';
+        const eanColKey = headers.find(h => h.toLowerCase().includes('ean') || h.toLowerCase().includes('barcode')) || '';
+        const catColKey = headers.find(h => h.toLowerCase().includes('category')) || '';
+
+        if (!skuColKey) return;
+
+        this.skuList = [];
+        data.forEach(row => {
+            const sku = String(row[skuColKey] || '').trim();
+            const name = nameColKey ? String(row[nameColKey] || '').trim() : '';
+            const ean = eanColKey ? String(row[eanColKey] || '').trim() : '';
+            const category = catColKey ? String(row[catColKey] || '').trim() : '';
+            if (sku || ean) {
+                this.skuList.push({ sku, name, ean, category });
+            }
+        });
+
+        if (this.skuList.length > 0) {
+            this.isLoaded = true;
+            this.lastFetched = new Date();
+            console.log(`[SheetSKU] Fallback: Extracted ${this.skuList.length} SKUs from LiveStock data`);
         }
     },
 
@@ -2594,4 +2641,14 @@ initApp = async function() {
             SheetSKUAutoSuggest.fetchSKUList();
         }
     }, 1500);
+};
+
+// Also refresh SKU list whenever LiveStock fetches new data
+const _originalFetchData = LiveStock.fetchData.bind(LiveStock);
+LiveStock.fetchData = async function() {
+    await _originalFetchData();
+    // After LiveStock data is loaded, extract SKU list if not already loaded
+    if (!SheetSKUAutoSuggest.isLoaded && this.isUnigen()) {
+        SheetSKUAutoSuggest._extractFromLiveStock();
+    }
 };
