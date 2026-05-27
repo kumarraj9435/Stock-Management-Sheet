@@ -396,11 +396,19 @@
                 </div>
                 <div class="live-stock-actions">
                     <button class="btn btn-small" id="live-stock-refresh" title="Refresh from Google Sheet">&#128260; Refresh</button>
+                    <button class="btn btn-small" id="live-stock-import-to-app" title="Import Sheet data to App Summary" style="background:linear-gradient(135deg,#00b894,#00cec9);">&#128229; Import to App</button>
                     <button class="btn btn-small" id="live-stock-add-row" title="Add new row">&#10133; Add Row</button>
                 </div>
             </div>
             <p class="live-stock-info">Sheet: <a href="https://docs.google.com/spreadsheets/d/1KP9ge5g4_7ugdeJDwbOSPV26Qo9xVvo3SgDG5R6jHlo/edit" target="_blank">Master Sheet 2026</a> | <span id="live-stock-last-sync">Last sync: Never</span></p>
             
+            <div class="live-stock-sheet-selector">
+                <label for="live-stock-sheet-select">Sheet:</label>
+                <select id="live-stock-sheet-select">
+                    <option value="">Loading sheets...</option>
+                </select>
+            </div>
+
             <div class="live-stock-search">
                 <input type="text" id="live-stock-search-input" placeholder="Search by SKU, Product Name, EAN...">
             </div>
