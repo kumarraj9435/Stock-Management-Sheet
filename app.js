@@ -715,13 +715,14 @@ document.getElementById('stock-in-form').addEventListener('submit', (e) => {
     const date = document.getElementById('in-date').value;
     const source = document.getElementById('in-source').value.trim();
     const notes = document.getElementById('in-notes').value.trim();
+    const invoice = document.getElementById('in-invoice').value.trim();
 
     if (!sku || quantity <= 0) { showToast('Enter valid SKU and quantity', 'error'); return; }
 
     const item = StockManager.items.find(i => i.sku === sku);
     if (!item) { showToast('SKU not found! Add in New tab first.', 'error'); return; }
 
-    StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, image: inImageBase64, timestamp: new Date().toISOString() });
+    StockManager.stockIn.push({ sku, productName: item.name, quantity, date, source, notes, invoice, image: inImageBase64, timestamp: new Date().toISOString() });
     StockManager.save();
     e.target.reset();
     document.getElementById('in-date').valueAsDate = new Date();
@@ -740,7 +741,7 @@ function renderStockInTable() {
     const tbody = document.querySelector('#stock-in-table tbody');
     const recent = [...StockManager.stockIn].reverse().slice(0, 15);
     if (recent.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
         return;
     }
     tbody.innerHTML = recent.map(t => `
@@ -749,6 +750,7 @@ function renderStockInTable() {
             <td><strong>${t.sku}</strong></td>
             <td>${t.productName}</td>
             <td style="color:#00b894;font-weight:700;">+${t.quantity}</td>
+            <td>${t.invoice || '-'}</td>
             <td>${t.source || '-'}</td>
         </tr>
     `).join('');
@@ -771,6 +773,7 @@ document.getElementById('stock-out-form').addEventListener('submit', (e) => {
     const date = document.getElementById('out-date').value;
     const destination = document.getElementById('out-destination').value.trim();
     const notes = document.getElementById('out-notes').value.trim();
+    const invoice = document.getElementById('out-invoice').value.trim();
 
     if (!sku || quantity <= 0) { showToast('Enter valid SKU and quantity', 'error'); return; }
 
@@ -780,7 +783,7 @@ document.getElementById('stock-out-form').addEventListener('submit', (e) => {
     const available = StockManager.getCurrentStock(sku);
     if (quantity > available) { showToast(`Insufficient! Available: ${available}`, 'error'); return; }
 
-    StockManager.stockOut.push({ sku, productName: item.name, quantity, date, destination, notes, timestamp: new Date().toISOString() });
+    StockManager.stockOut.push({ sku, productName: item.name, quantity, date, destination, notes, invoice, timestamp: new Date().toISOString() });
     StockManager.save();
     e.target.reset();
     document.getElementById('out-date').valueAsDate = new Date();
@@ -794,7 +797,7 @@ function renderStockOutTable() {
     const tbody = document.querySelector('#stock-out-table tbody');
     const recent = [...StockManager.stockOut].reverse().slice(0, 15);
     if (recent.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No transactions yet</td></tr>';
         return;
     }
     tbody.innerHTML = recent.map(t => `
@@ -803,6 +806,7 @@ function renderStockOutTable() {
             <td><strong>${t.sku}</strong></td>
             <td>${t.productName}</td>
             <td style="color:#ff6b6b;font-weight:700;">-${t.quantity}</td>
+            <td>${t.invoice || '-'}</td>
             <td>${t.destination || '-'}</td>
         </tr>
     `).join('');
@@ -2439,3 +2443,155 @@ document.getElementById('sheet-out-add-entry')?.addEventListener('click', async 
         showToast('Error: ' + err.message, 'error');
     }
 });
+
+
+
+// ==================== GOOGLE SHEET SKU AUTO-SUGGEST (Master Sheet 2026) ====================
+// Fetches SKU list from Master Sheet 2026 and provides auto-suggest in Stock In/Out forms
+
+const SheetSKUAutoSuggest = {
+    skuList: [],       // Array of { sku, name, ean, category }
+    isLoaded: false,
+    isLoading: false,
+    lastFetched: null,
+
+    // Fetch SKU list from Google Sheet
+    async fetchSKUList() {
+        if (this.isLoading) return;
+        if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') return;
+
+        this.isLoading = true;
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getSKUList`);
+            const result = await response.json();
+
+            if (result.success) {
+                this.skuList = result.skuList || [];
+                this.isLoaded = true;
+                this.lastFetched = new Date();
+                console.log(`[SheetSKU] Loaded ${this.skuList.length} SKUs from Master Sheet 2026`);
+            } else {
+                console.error('[SheetSKU] Error:', result.error);
+            }
+        } catch (error) {
+            console.error('[SheetSKU] Fetch failed:', error);
+        } finally {
+            this.isLoading = false;
+        }
+    },
+
+    // Search SKUs matching query (by SKU, name, or EAN)
+    search(query) {
+        if (!query || query.length < 1) return [];
+        const q = query.toLowerCase();
+        return this.skuList.filter(item => {
+            return (item.sku && item.sku.toLowerCase().includes(q)) ||
+                   (item.name && item.name.toLowerCase().includes(q)) ||
+                   (item.ean && item.ean.toLowerCase().includes(q));
+        }).slice(0, 10); // Max 10 suggestions
+    },
+
+    // Setup auto-suggest for a given input field
+    setupAutoSuggest(inputId, suggestionsId, onSelect) {
+        const input = document.getElementById(inputId);
+        const suggestions = document.getElementById(suggestionsId);
+        if (!input || !suggestions) return;
+
+        input.addEventListener('input', () => {
+            const query = input.value.trim();
+            
+            // If not loaded yet, fetch first
+            if (!this.isLoaded && !this.isLoading) {
+                this.fetchSKUList();
+            }
+
+            if (query.length < 1) {
+                suggestions.classList.remove('visible');
+                return;
+            }
+
+            const results = this.search(query);
+
+            if (results.length === 0) {
+                if (this.isLoading) {
+                    suggestions.innerHTML = '<div class="sheet-suggest-header">Master Sheet 2026</div><div class="sheet-suggest-loading">Loading...</div>';
+                    suggestions.classList.add('visible');
+                } else if (this.isLoaded) {
+                    suggestions.classList.remove('visible');
+                }
+                return;
+            }
+
+            suggestions.innerHTML = '<div class="sheet-suggest-header">Master Sheet 2026</div>' +
+                results.map(item => `
+                    <div class="sheet-suggest-item" data-sku="${item.sku}" data-name="${item.name || ''}" data-ean="${item.ean || ''}">
+                        <span class="suggest-sku">${item.sku}</span>
+                        <span class="suggest-name">${item.name || ''}${item.category ? ' [' + item.category + ']' : ''}</span>
+                        ${item.ean ? '<span class="suggest-ean">EAN: ' + item.ean + '</span>' : ''}
+                    </div>
+                `).join('');
+
+            suggestions.classList.add('visible');
+
+            // Click handlers for suggestion items
+            suggestions.querySelectorAll('.sheet-suggest-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    input.value = el.dataset.sku;
+                    suggestions.classList.remove('visible');
+                    if (onSelect) onSelect(el.dataset.sku, el.dataset.name, el.dataset.ean);
+                });
+            });
+        });
+
+        // Hide on blur
+        input.addEventListener('blur', () => {
+            setTimeout(() => suggestions.classList.remove('visible'), 300);
+        });
+
+        // Focus - try to load SKU list if not loaded
+        input.addEventListener('focus', () => {
+            if (!this.isLoaded && !this.isLoading) {
+                this.fetchSKUList();
+            }
+        });
+    }
+};
+
+// Setup auto-suggest for Stock In SKU field
+SheetSKUAutoSuggest.setupAutoSuggest('in-sku', 'in-sheet-sku-suggestions', (sku, name, ean) => {
+    // Auto-fill product name
+    if (name) {
+        document.getElementById('in-product-display').value = name;
+    }
+    // Also check if this SKU exists in local StockManager
+    const localItem = StockManager.items.find(i => i.sku === sku);
+    if (localItem) {
+        document.getElementById('in-product-display').value = localItem.name;
+    }
+});
+
+// Setup auto-suggest for Stock Out SKU field
+SheetSKUAutoSuggest.setupAutoSuggest('out-sku', 'out-sheet-sku-suggestions', (sku, name, ean) => {
+    // Auto-fill product name
+    if (name) {
+        document.getElementById('out-product-display').value = name;
+    }
+    // Also check if this SKU exists in local StockManager and fill available stock
+    const localItem = StockManager.items.find(i => i.sku === sku);
+    if (localItem) {
+        document.getElementById('out-product-display').value = localItem.name;
+        document.getElementById('out-available').value = StockManager.getCurrentStock(sku);
+    }
+});
+
+// Pre-fetch SKU list when app initializes (for Unigen company)
+const _originalInitAppWithSKU = initApp;
+initApp = async function() {
+    await _originalInitAppWithSKU();
+    // Fetch SKU list after a short delay (after LiveStock check)
+    setTimeout(() => {
+        if (LiveStock.isUnigen()) {
+            SheetSKUAutoSuggest.fetchSKUList();
+        }
+    }, 1500);
+};

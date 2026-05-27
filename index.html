@@ -187,6 +187,7 @@
                             <input type="text" id="in-sku" placeholder="Type SKU to search..." autocomplete="off" required>
                             <button type="button" class="btn-small btn-barcode" data-target="in-sku" title="Scan Barcode">&#128247;</button>
                             <div class="sku-suggestions" id="in-sku-suggestions"></div>
+                            <div class="sku-suggestions sheet-sku-suggestions" id="in-sheet-sku-suggestions"></div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -206,10 +207,16 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="in-invoice">Invoice Number</label>
+                        <input type="text" id="in-invoice" placeholder="e.g., INV-2026-001">
+                    </div>
+                    <div class="form-group">
                         <label for="in-source">Source/Supplier</label>
                         <input type="text" id="in-source" placeholder="Supplier name">
                     </div>
-                    <div class="form-group">
+                </div>
+                <div class="form-row">
+                    <div class="form-group full-width">
                         <label for="in-notes">Notes</label>
                         <input type="text" id="in-notes" placeholder="Optional notes">
                     </div>
@@ -254,6 +261,7 @@
                                 <th>SKU</th>
                                 <th>Product</th>
                                 <th>Qty</th>
+                                <th>Invoice</th>
                                 <th>Source</th>
                             </tr>
                         </thead>
@@ -314,6 +322,7 @@
                             <input type="text" id="out-sku" placeholder="Type SKU to search..." autocomplete="off" required>
                             <button type="button" class="btn-small btn-barcode" data-target="out-sku" title="Scan Barcode">&#128247;</button>
                             <div class="sku-suggestions" id="out-sku-suggestions"></div>
+                            <div class="sku-suggestions sheet-sku-suggestions" id="out-sheet-sku-suggestions"></div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -342,7 +351,11 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group full-width">
+                    <div class="form-group">
+                        <label for="out-invoice">Invoice Number</label>
+                        <input type="text" id="out-invoice" placeholder="e.g., INV-2026-001">
+                    </div>
+                    <div class="form-group">
                         <label for="out-notes">Notes</label>
                         <input type="text" id="out-notes" placeholder="Optional notes">
                     </div>
@@ -367,6 +380,7 @@
                                 <th>SKU</th>
                                 <th>Product</th>
                                 <th>Qty</th>
+                                <th>Invoice</th>
                                 <th>Destination</th>
                             </tr>
                         </thead>
