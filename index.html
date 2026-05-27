@@ -261,6 +261,32 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Google Sheet Stock In (Unigen Only) -->
+            <div class="sheet-sync-section unigen-only-tab" style="display:none;">
+                <h3 style="color:#00b894;margin-bottom:12px;border-top:2px solid #e8e8e8;padding-top:20px;">Google Sheet - Stock In</h3>
+                <div class="live-stock-sheet-selector">
+                    <label for="sheet-in-select">Sheet:</label>
+                    <select id="sheet-in-select">
+                        <option value="">Select In Sheet...</option>
+                        <option value="In-Return coco Bluc Flipkart,Am">In-Return coco Bluc Flipkart,Am</option>
+                        <option value="In-Rcturn Stock">In-Rcturn Stock</option>
+                        <option value="New Stock in">New Stock in</option>
+                    </select>
+                </div>
+                <div class="live-stock-search" style="margin-bottom:10px;">
+                    <input type="text" id="sheet-in-search" placeholder="Search in sheet data...">
+                </div>
+                <div class="table-wrapper">
+                    <table id="sheet-in-table">
+                        <thead id="sheet-in-thead"></thead>
+                        <tbody id="sheet-in-tbody">
+                            <tr><td style="text-align:center;color:#999;padding:20px;">Select a sheet above</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="sheet-in-count" style="font-size:0.75rem;color:#888;margin-top:8px;">0 rows</p>
+            </div>
         </section>
 
         <!-- Stock Out Tab -->
@@ -333,6 +359,31 @@
                         <tbody></tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Google Sheet Stock Out (Unigen Only) -->
+            <div class="sheet-sync-section unigen-only-tab" style="display:none;">
+                <h3 style="color:#ff6b6b;margin-bottom:12px;border-top:2px solid #e8e8e8;padding-top:20px;">Google Sheet - Stock Out</h3>
+                <div class="live-stock-sheet-selector">
+                    <label for="sheet-out-select">Sheet:</label>
+                    <select id="sheet-out-select">
+                        <option value="">Select Out Sheet...</option>
+                        <option value="Daily-Out Amzon Flipkart websit">Daily-Out Amzon Flipkart websit</option>
+                        <option value="Out-Amazon Flipkart FBA">Out-Amazon Flipkart FBA</option>
+                    </select>
+                </div>
+                <div class="live-stock-search" style="margin-bottom:10px;">
+                    <input type="text" id="sheet-out-search" placeholder="Search in sheet data...">
+                </div>
+                <div class="table-wrapper">
+                    <table id="sheet-out-table">
+                        <thead id="sheet-out-thead"></thead>
+                        <tbody id="sheet-out-tbody">
+                            <tr><td style="text-align:center;color:#999;padding:20px;">Select a sheet above</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="sheet-out-count" style="font-size:0.75rem;color:#888;margin-top:8px;">0 rows</p>
             </div>
         </section>
 
