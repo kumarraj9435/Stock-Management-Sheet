@@ -274,6 +274,20 @@
                         <option value="New Stock in">New Stock in</option>
                     </select>
                 </div>
+                <div class="sheet-entry-form" style="margin-bottom:12px;padding:12px;background:#e8f8f5;border-radius:10px;border:1px solid #00b894;">
+                    <div class="form-row" style="margin-bottom:8px;">
+                        <div class="form-group" style="flex:1;">
+                            <input type="text" id="sheet-in-sku-input" placeholder="EAN / SKU" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <input type="number" id="sheet-in-qty-input" placeholder="Qty" min="1" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <input type="text" id="sheet-in-notes-input" placeholder="Notes/Source" style="padding:10px;border:2px solid #00b894;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                    </div>
+                    <button type="button" id="sheet-in-add-entry" class="btn btn-success" style="padding:10px 20px;width:auto;font-size:0.8rem;">+ Add Entry to Sheet</button>
+                </div>
                 <div class="live-stock-search" style="margin-bottom:10px;">
                     <input type="text" id="sheet-in-search" placeholder="Search in sheet data...">
                 </div>
@@ -371,6 +385,20 @@
                         <option value="Daily-Out Amzon Flipkart websit">Daily-Out Amzon Flipkart websit</option>
                         <option value="Out-Amazon Flipkart FBA">Out-Amazon Flipkart FBA</option>
                     </select>
+                </div>
+                <div class="sheet-entry-form" style="margin-bottom:12px;padding:12px;background:#fde8e8;border-radius:10px;border:1px solid #ff6b6b;">
+                    <div class="form-row" style="margin-bottom:8px;">
+                        <div class="form-group" style="flex:1;">
+                            <input type="text" id="sheet-out-sku-input" placeholder="EAN / SKU" style="padding:10px;border:2px solid #ff6b6b;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <input type="number" id="sheet-out-qty-input" placeholder="Qty" min="1" style="padding:10px;border:2px solid #ff6b6b;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <input type="text" id="sheet-out-notes-input" placeholder="Destination/Notes" style="padding:10px;border:2px solid #ff6b6b;border-radius:8px;font-size:0.9rem;width:100%;">
+                        </div>
+                    </div>
+                    <button type="button" id="sheet-out-add-entry" class="btn btn-danger" style="padding:10px 20px;width:auto;font-size:0.8rem;">+ Add Entry to Sheet</button>
                 </div>
                 <div class="live-stock-search" style="margin-bottom:10px;">
                     <input type="text" id="sheet-out-search" placeholder="Search in sheet data...">
