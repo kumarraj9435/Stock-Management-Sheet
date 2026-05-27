@@ -1582,7 +1582,7 @@ document.getElementById('barcode-modal').addEventListener('click', (e) => {
  * IMPORTANT: Replace this URL with your deployed Google Apps Script Web App URL
  * Deploy the google-apps-script.js code as a Web App and paste the URL here.
  */
-const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJQ5nS4BTtPvLHvioPkdi5zUp_rLUStCkvkhWWdS_JqIymXYDH4O0f_BINGjfUA5ILxw/exec';
 
 // Live Stock State
 const LiveStock = {
