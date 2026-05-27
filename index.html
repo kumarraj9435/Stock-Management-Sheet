@@ -40,6 +40,7 @@
             <button class="tab-btn" data-tab="stock-in">In</button>
             <button class="tab-btn" data-tab="stock-out">Out</button>
             <button class="tab-btn" data-tab="summary">Summary</button>
+            <button class="tab-btn unigen-only-tab" data-tab="live-stock" style="display:none;">Live Stock</button>
         </nav>
 
         <!-- Opening Stock Tab -->
@@ -385,6 +386,113 @@
             </div>
         </section>
 
+        <!-- Live Stock Tab (Unigen Google Sheet Sync) -->
+        <section id="live-stock" class="tab-content">
+            <h2>Live Stock - Google Sheet Sync</h2>
+            <div class="live-stock-header">
+                <div class="live-stock-status">
+                    <span class="sync-indicator" id="sync-indicator"></span>
+                    <span id="sync-status-text">Disconnected</span>
+                </div>
+                <div class="live-stock-actions">
+                    <button class="btn btn-small" id="live-stock-refresh" title="Refresh from Google Sheet">&#128260; Refresh</button>
+                    <button class="btn btn-small" id="live-stock-add-row" title="Add new row">&#10133; Add Row</button>
+                </div>
+            </div>
+            <p class="live-stock-info">Sheet: <a href="https://docs.google.com/spreadsheets/d/1KP9ge5g4_7ugdeJDwbOSPV26Qo9xVvo3SgDG5R6jHlo/edit" target="_blank">Master Sheet 2026</a> | <span id="live-stock-last-sync">Last sync: Never</span></p>
+            
+            <div class="live-stock-search">
+                <input type="text" id="live-stock-search-input" placeholder="Search by SKU, Product Name, EAN...">
+            </div>
+
+            <div class="live-stock-table-wrapper">
+                <div id="live-stock-loading" class="live-stock-loading">
+                    <div class="spinner"></div>
+                    <p>Loading data from Google Sheet...</p>
+                </div>
+                <div class="table-wrapper">
+                    <table id="live-stock-table">
+                        <thead id="live-stock-thead"></thead>
+                        <tbody id="live-stock-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="live-stock-footer">
+                <span id="live-stock-row-count">0 rows</span>
+                <span>Auto-refresh: <strong>30s</strong></span>
+            </div>
+        </section>
+
+        <!-- Add Row Modal (Live Stock) -->
+        <div id="add-row-modal" class="modal hidden">
+            <div class="modal-content" style="max-width:500px;text-align:left;">
+                <h3 style="color:#667eea;text-align:center;">Add New Row to Google Sheet</h3>
+                <form id="add-row-form" style="margin-top:15px;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-row-category">Category</label>
+                            <input type="text" id="add-row-category" placeholder="Category">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-row-sku">Master SKU</label>
+                            <input type="text" id="add-row-sku" placeholder="Master SKU" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-row-product">Product Name</label>
+                            <input type="text" id="add-row-product" placeholder="Product Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-row-title">Title</label>
+                            <input type="text" id="add-row-title" placeholder="Title">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-row-ean">EAN/Barcode</label>
+                            <input type="text" id="add-row-ean" placeholder="EAN/Barcode">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-row-status">Status</label>
+                            <select id="add-row-status">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Discontinued">Discontinued</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-row-opening">Opening Stock</label>
+                            <input type="number" id="add-row-opening" placeholder="0" min="0">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="add-row-cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add to Sheet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Cell Modal (Live Stock) -->
+        <div id="edit-cell-modal" class="modal hidden">
+            <div class="modal-content" style="max-width:400px;text-align:left;">
+                <h3 style="color:#667eea;text-align:center;">Edit Value</h3>
+                <div style="margin-top:15px;">
+                    <p style="font-size:0.85rem;color:#666;margin-bottom:5px;">Column: <strong id="edit-cell-column"></strong></p>
+                    <p style="font-size:0.85rem;color:#666;margin-bottom:10px;">SKU: <strong id="edit-cell-sku"></strong></p>
+                    <input type="text" id="edit-cell-value" class="modal-input" style="text-align:left;letter-spacing:normal;">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="edit-cell-cancel">Cancel</button>
+                    <button class="btn btn-primary" id="edit-cell-save">Save</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Clear All Confirmation Modal -->
         <div id="clear-modal" class="modal hidden">
             <div class="modal-content">
@@ -422,6 +530,10 @@
         <button class="bottom-nav-btn" data-tab="summary">
             <span class="nav-icon">&#128202;</span>
             <span class="nav-label">Summary</span>
+        </button>
+        <button class="bottom-nav-btn unigen-only-tab" data-tab="live-stock" style="display:none;">
+            <span class="nav-icon">&#128279;</span>
+            <span class="nav-label">Live</span>
         </button>
     </nav>
 

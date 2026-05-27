@@ -1572,3 +1572,441 @@ document.getElementById('barcode-modal').addEventListener('click', (e) => {
         closeBarcodeScanner();
     }
 });
+
+
+
+// ==================== GOOGLE SHEET LIVE STOCK (UNIGEN ONLY) ====================
+
+/**
+ * IMPORTANT: Replace this URL with your deployed Google Apps Script Web App URL
+ * Deploy the google-apps-script.js code as a Web App and paste the URL here.
+ */
+const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+// Live Stock State
+const LiveStock = {
+    data: [],
+    headers: [],
+    filteredData: [],
+    autoRefreshInterval: null,
+    isLoading: false,
+    lastSynced: null,
+
+    // Check if current company is Unigen
+    isUnigen() {
+        const select = document.getElementById('company-select');
+        if (!select) return false;
+        const selectedText = select.options[select.selectedIndex]?.text || '';
+        const selectedValue = select.value || '';
+        return selectedText.toLowerCase().includes('unigen') || selectedValue.toLowerCase().includes('unigen');
+    },
+
+    // Show/Hide Live Stock tab based on company
+    toggleLiveStockTab() {
+        const isUnigen = this.isUnigen();
+        document.querySelectorAll('.unigen-only-tab').forEach(el => {
+            el.style.display = isUnigen ? '' : 'none';
+        });
+
+        // If switching away from Unigen and live-stock tab is active, switch to upload tab
+        if (!isUnigen) {
+            const liveStockSection = document.getElementById('live-stock');
+            if (liveStockSection && liveStockSection.classList.contains('active')) {
+                switchTab('opening-stock');
+            }
+            this.stopAutoRefresh();
+        } else {
+            this.startAutoRefresh();
+        }
+    },
+
+    // Fetch data from Google Sheet
+    async fetchData() {
+        if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            this.showError('Google Apps Script URL not configured! Edit app.js and set GOOGLE_SCRIPT_URL.');
+            return;
+        }
+
+        this.isLoading = true;
+        this.updateLoadingUI(true);
+        this.updateSyncIndicator('syncing');
+
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=read`);
+            const result = await response.json();
+
+            if (result.success) {
+                this.data = result.data || [];
+                this.headers = result.headers || [];
+                this.filteredData = [...this.data];
+                this.lastSynced = new Date();
+                this.renderTable();
+                this.updateSyncIndicator('connected');
+                this.updateLastSyncTime();
+                document.getElementById('live-stock-row-count').textContent = `${this.data.length} rows`;
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('Live Stock fetch error:', error);
+            this.updateSyncIndicator('error');
+            showToast('Google Sheet sync failed: ' + error.message, 'error');
+        } finally {
+            this.isLoading = false;
+            this.updateLoadingUI(false);
+        }
+    },
+
+    // Update a cell in Google Sheet
+    async updateCell(masterSKU, columnName, newValue) {
+        if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            showToast('Google Apps Script URL not configured!', 'error');
+            return false;
+        }
+
+        this.updateSyncIndicator('syncing');
+
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    action: 'update',
+                    masterSKU: masterSKU,
+                    updates: { [columnName]: newValue }
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update local data
+                const row = this.data.find(r => {
+                    const skuKey = this.headers.find(h => h.toLowerCase().includes('master sku')) || 'Master SKU';
+                    return String(r[skuKey]).trim() === String(masterSKU).trim();
+                });
+                if (row) {
+                    row[columnName] = newValue;
+                }
+                this.updateSyncIndicator('connected');
+                showToast(`Updated: ${columnName} = ${newValue}`, 'success');
+                this.renderTable();
+                return true;
+            } else {
+                throw new Error(result.error || 'Update failed');
+            }
+        } catch (error) {
+            console.error('Live Stock update error:', error);
+            this.updateSyncIndicator('error');
+            showToast('Update failed: ' + error.message, 'error');
+            return false;
+        }
+    },
+
+    // Add a new row to Google Sheet
+    async addRow(rowData) {
+        if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            showToast('Google Apps Script URL not configured!', 'error');
+            return false;
+        }
+
+        this.updateSyncIndicator('syncing');
+
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    action: 'add',
+                    rowData: rowData
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.updateSyncIndicator('connected');
+                showToast('New row added to Google Sheet!', 'success');
+                // Refresh to get latest data
+                await this.fetchData();
+                return true;
+            } else {
+                throw new Error(result.error || 'Add failed');
+            }
+        } catch (error) {
+            console.error('Live Stock add error:', error);
+            this.updateSyncIndicator('error');
+            showToast('Add failed: ' + error.message, 'error');
+            return false;
+        }
+    },
+
+    // Render the table
+    renderTable() {
+        const thead = document.getElementById('live-stock-thead');
+        const tbody = document.getElementById('live-stock-tbody');
+
+        if (!thead || !tbody) return;
+
+        // Filter out internal columns
+        const displayHeaders = this.headers.filter(h => !h.startsWith('_'));
+
+        // Render headers
+        thead.innerHTML = `<tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+        // Render data
+        if (this.filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${displayHeaders.length}" style="text-align:center;color:#999;padding:25px;">No data found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = this.filteredData.map(row => {
+            const skuKey = this.headers.find(h => h.toLowerCase().includes('master sku')) || 'Master SKU';
+            const masterSKU = row[skuKey] || '';
+
+            return `<tr>${displayHeaders.map(header => {
+                const value = row[header] !== undefined && row[header] !== null ? row[header] : '';
+                const isEditable = masterSKU ? 'editable-cell' : '';
+                return `<td class="${isEditable}" data-sku="${masterSKU}" data-column="${header}" title="Click to edit">${value}</td>`;
+            }).join('')}</tr>`;
+        }).join('');
+
+        // Add click handlers for editable cells
+        tbody.querySelectorAll('.editable-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const sku = cell.dataset.sku;
+                const column = cell.dataset.column;
+                const currentValue = cell.textContent;
+                this.openEditCellModal(sku, column, currentValue);
+            });
+        });
+    },
+
+    // Search/Filter
+    filterData(query) {
+        if (!query) {
+            this.filteredData = [...this.data];
+        } else {
+            const q = query.toLowerCase();
+            this.filteredData = this.data.filter(row => {
+                return Object.values(row).some(val =>
+                    String(val).toLowerCase().includes(q)
+                );
+            });
+        }
+        this.renderTable();
+        document.getElementById('live-stock-row-count').textContent = `${this.filteredData.length} of ${this.data.length} rows`;
+    },
+
+    // Open edit cell modal
+    openEditCellModal(sku, column, currentValue) {
+        document.getElementById('edit-cell-sku').textContent = sku;
+        document.getElementById('edit-cell-column').textContent = column;
+        document.getElementById('edit-cell-value').value = currentValue;
+        document.getElementById('edit-cell-modal').classList.remove('hidden');
+
+        // Store current edit context
+        this._editContext = { sku, column };
+    },
+
+    // UI Helpers
+    updateLoadingUI(isLoading) {
+        const loadingEl = document.getElementById('live-stock-loading');
+        if (loadingEl) {
+            loadingEl.style.display = isLoading ? 'flex' : 'none';
+        }
+    },
+
+    updateSyncIndicator(status) {
+        const indicator = document.getElementById('sync-indicator');
+        const statusText = document.getElementById('sync-status-text');
+        if (!indicator || !statusText) return;
+
+        indicator.className = 'sync-indicator';
+        switch (status) {
+            case 'connected':
+                indicator.classList.add('sync-connected');
+                statusText.textContent = 'Connected';
+                break;
+            case 'syncing':
+                indicator.classList.add('sync-syncing');
+                statusText.textContent = 'Syncing...';
+                break;
+            case 'error':
+                indicator.classList.add('sync-error');
+                statusText.textContent = 'Error';
+                break;
+            default:
+                statusText.textContent = 'Disconnected';
+        }
+    },
+
+    updateLastSyncTime() {
+        const el = document.getElementById('live-stock-last-sync');
+        if (el && this.lastSynced) {
+            el.textContent = `Last sync: ${this.lastSynced.toLocaleTimeString()}`;
+        }
+    },
+
+    showError(msg) {
+        const tbody = document.getElementById('live-stock-tbody');
+        const thead = document.getElementById('live-stock-thead');
+        if (thead) thead.innerHTML = '';
+        if (tbody) {
+            tbody.innerHTML = `<tr><td style="text-align:center;color:#ff6b6b;padding:25px;">${msg}</td></tr>`;
+        }
+        this.updateLoadingUI(false);
+    },
+
+    // Auto-refresh every 30 seconds
+    startAutoRefresh() {
+        this.stopAutoRefresh();
+        if (this.isUnigen()) {
+            this.fetchData();
+            this.autoRefreshInterval = setInterval(() => {
+                if (this.isUnigen() && !this.isLoading) {
+                    this.fetchData();
+                }
+            }, 30000); // 30 seconds
+        }
+    },
+
+    stopAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+        }
+    }
+};
+
+// ==================== LIVE STOCK EVENT HANDLERS ====================
+
+// Refresh button
+document.getElementById('live-stock-refresh')?.addEventListener('click', () => {
+    LiveStock.fetchData();
+});
+
+// Search input
+document.getElementById('live-stock-search-input')?.addEventListener('input', (e) => {
+    LiveStock.filterData(e.target.value.trim());
+});
+
+// Add Row button - open modal
+document.getElementById('live-stock-add-row')?.addEventListener('click', () => {
+    document.getElementById('add-row-modal').classList.remove('hidden');
+    document.getElementById('add-row-form').reset();
+});
+
+// Add Row form submit
+document.getElementById('add-row-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const rowData = {};
+    // Map form fields to column names (flexible matching)
+    const category = document.getElementById('add-row-category').value.trim();
+    const sku = document.getElementById('add-row-sku').value.trim();
+    const product = document.getElementById('add-row-product').value.trim();
+    const title = document.getElementById('add-row-title').value.trim();
+    const ean = document.getElementById('add-row-ean').value.trim();
+    const status = document.getElementById('add-row-status').value;
+    const opening = document.getElementById('add-row-opening').value || '0';
+
+    if (!sku || !product) {
+        showToast('Master SKU and Product Name required!', 'error');
+        return;
+    }
+
+    // Match to actual sheet headers
+    LiveStock.headers.forEach(header => {
+        const h = header.toLowerCase();
+        if (h.includes('category')) rowData[header] = category;
+        else if (h.includes('master sku') || h === 'master sku') rowData[header] = sku;
+        else if (h.includes('product name')) rowData[header] = product;
+        else if (h === 'title' || h.includes('title')) rowData[header] = title;
+        else if (h.includes('ean') || h.includes('barcode')) rowData[header] = ean;
+        else if (h.includes('status')) rowData[header] = status;
+        else if (h.includes('opening')) rowData[header] = parseInt(opening) || 0;
+    });
+
+    const success = await LiveStock.addRow(rowData);
+    if (success) {
+        document.getElementById('add-row-modal').classList.add('hidden');
+        document.getElementById('add-row-form').reset();
+    }
+});
+
+// Add Row cancel
+document.getElementById('add-row-cancel')?.addEventListener('click', () => {
+    document.getElementById('add-row-modal').classList.add('hidden');
+});
+
+// Edit Cell save
+document.getElementById('edit-cell-save')?.addEventListener('click', async () => {
+    if (!LiveStock._editContext) return;
+    const { sku, column } = LiveStock._editContext;
+    const newValue = document.getElementById('edit-cell-value').value;
+
+    const success = await LiveStock.updateCell(sku, column, newValue);
+    if (success) {
+        document.getElementById('edit-cell-modal').classList.add('hidden');
+    }
+});
+
+// Edit Cell cancel
+document.getElementById('edit-cell-cancel')?.addEventListener('click', () => {
+    document.getElementById('edit-cell-modal').classList.add('hidden');
+});
+
+// Close modals on backdrop click
+document.getElementById('add-row-modal')?.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('add-row-modal')) {
+        document.getElementById('add-row-modal').classList.add('hidden');
+    }
+});
+
+document.getElementById('edit-cell-modal')?.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('edit-cell-modal')) {
+        document.getElementById('edit-cell-modal').classList.add('hidden');
+    }
+});
+
+// Enter key on edit cell input
+document.getElementById('edit-cell-value')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('edit-cell-save').click();
+    }
+});
+
+// ==================== HOOK INTO COMPANY SWITCHER ====================
+
+// Override the company-select change to also toggle Live Stock
+const _originalCompanySelect = document.getElementById('company-select');
+if (_originalCompanySelect) {
+    _originalCompanySelect.addEventListener('change', () => {
+        // Small delay to ensure currentCompanyId is updated
+        setTimeout(() => {
+            LiveStock.toggleLiveStockTab();
+        }, 100);
+    });
+}
+
+// Hook into initApp to check Unigen on startup
+const _originalInitApp = initApp;
+initApp = async function() {
+    await _originalInitApp();
+    // After app initializes, check if Unigen is selected
+    setTimeout(() => {
+        LiveStock.toggleLiveStockTab();
+    }, 500);
+};
+
+// Also hook tab switching for live-stock tab
+const _originalSwitchTab = switchTab;
+switchTab = function(tabName) {
+    _originalSwitchTab(tabName);
+    if (tabName === 'live-stock' && LiveStock.isUnigen()) {
+        if (LiveStock.data.length === 0) {
+            LiveStock.fetchData();
+        }
+    }
+};
