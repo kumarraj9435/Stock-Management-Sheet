@@ -1950,6 +1950,102 @@ document.getElementById('live-stock-sheet-select')?.addEventListener('change', (
     }
 });
 
+// Import to App button - sync Master Sheet data to Firebase/App Summary
+document.getElementById('live-stock-import-to-app')?.addEventListener('click', async () => {
+    if (LiveStock.data.length === 0) {
+        showToast('Pehle data load hone do! Refresh karo.', 'error');
+        return;
+    }
+
+    const pwd = prompt('Import karne ke liye password enter karo:');
+    if (pwd !== 'Raj@9435') { showToast('Wrong password!', 'error'); return; }
+
+    const sheetData = LiveStock.data;
+    const headers = LiveStock.headers;
+
+    // Find relevant columns dynamically
+    const skuKey = headers.find(h => h.toLowerCase().includes('master sku')) || headers.find(h => h.toLowerCase() === 'sku') || '';
+    const nameKey = headers.find(h => h.toLowerCase().includes('product name')) || headers.find(h => h.toLowerCase() === 'name') || '';
+    const categoryKey = headers.find(h => h.toLowerCase().includes('category')) || '';
+    const eanKey = headers.find(h => h.toLowerCase().includes('ean') || h.toLowerCase().includes('barcode')) || '';
+    const statusKey = headers.find(h => h.toLowerCase().includes('status')) || '';
+
+    // Find stock/quantity columns - look for Opening Stock or any numeric month columns
+    const openingKey = headers.find(h => h.toLowerCase().includes('opening stock') || h.toLowerCase().includes('opening')) || '';
+
+    // Calculate current stock from monthly data if available
+    const monthKeys = headers.filter(h => {
+        const lower = h.toLowerCase();
+        return lower === 'jan' || lower === 'feb' || lower === 'mar' || lower === 'apr' || 
+               lower === 'may' || lower === 'jun' || lower === 'jul' || lower === 'aug' || 
+               lower === 'sep' || lower === 'oct' || lower === 'nov' || lower === 'dec' ||
+               lower.includes('january') || lower.includes('february') || lower.includes('march') ||
+               lower.includes('april') || lower.includes('may') || lower.includes('june') ||
+               lower.includes('july') || lower.includes('august') || lower.includes('september') ||
+               lower.includes('october') || lower.includes('november') || lower.includes('december');
+    });
+
+    if (!skuKey || !nameKey) {
+        showToast('Sheet mein Master SKU ya Product Name column nahi mila!', 'error');
+        return;
+    }
+
+    let imported = 0, updated = 0, skipped = 0;
+
+    sheetData.forEach(row => {
+        const sku = String(row[skuKey] || '').trim();
+        const name = String(row[nameKey] || '').trim();
+        const category = categoryKey ? String(row[categoryKey] || '').trim() : '';
+        const ean = eanKey ? String(row[eanKey] || '').trim() : '';
+        const status = statusKey ? String(row[statusKey] || '').trim() : '';
+
+        // Skip inactive/discontinued or empty rows
+        if (!sku || !name) { skipped++; return; }
+        if (status && (status.toLowerCase() === 'inactive' || status.toLowerCase() === 'discontinued')) { skipped++; return; }
+
+        // Calculate quantity: Opening Stock + sum of monthly data
+        let quantity = 0;
+        if (openingKey && row[openingKey] !== '' && row[openingKey] !== undefined) {
+            quantity = parseInt(String(row[openingKey]).replace(/[^0-9\-]/g, '')) || 0;
+        }
+
+        // If there are monthly columns, sum them up (they represent adjustments/sales)
+        // But typically Master Sheet 2026 has Opening Stock as the base
+        // If no opening stock found, try to find any numeric column as quantity
+        if (quantity === 0 && monthKeys.length > 0) {
+            // Sum all month values as total stock movement
+            monthKeys.forEach(mk => {
+                const val = parseInt(String(row[mk] || '0').replace(/[^0-9\-]/g, '')) || 0;
+                quantity += val;
+            });
+        }
+
+        // Update or add to StockManager
+        const existing = StockManager.items.find(i => i.sku === sku);
+        if (existing) {
+            // Update existing item
+            existing.name = name;
+            if (category) existing.category = category;
+            if (ean) existing.ean = ean;
+            existing.quantity = quantity; // Override with sheet's current stock
+            updated++;
+        } else {
+            // Add new item
+            StockManager.items.push({
+                sku, name, category, quantity, price: 0, ean,
+                location: '', image: '', dateAdded: new Date().toISOString()
+            });
+            imported++;
+        }
+    });
+
+    // Save to Firebase
+    StockManager.save();
+    renderSummary();
+
+    showToast(`Import Done! ${imported} new + ${updated} updated + ${skipped} skipped`, 'success');
+});
+
 // Search input
 document.getElementById('live-stock-search-input')?.addEventListener('input', (e) => {
     LiveStock.filterData(e.target.value.trim());
