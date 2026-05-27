@@ -199,6 +199,7 @@ var DEFAULT_SHEET  = 'Master Sheet 2026';
  *   action=read (default) — read single sheet
  *   action=readAll — read ALL sheets
  *   action=listSheets — get list of all sheet names
+ *   action=getSKUList — get SKU list from Master Sheet 2026 (for auto-suggest)
  *   sheet=SheetName — specify which sheet to read (default: Master Sheet 2026)
  */
 function doGet(e) {
@@ -212,9 +213,11 @@ function doGet(e) {
       return readAllSheets();
     } else if (action === 'listSheets') {
       return listAllSheets();
+    } else if (action === 'getSKUList') {
+      return getSKUList();
     }
     
-    return jsonResponse({ success: false, error: 'Invalid action. Use: read, readAll, listSheets' });
+    return jsonResponse({ success: false, error: 'Invalid action. Use: read, readAll, listSheets, getSKUList' });
     
   } catch (error) {
     return jsonResponse({ success: false, error: error.toString() });
@@ -323,6 +326,74 @@ function readAllSheets() {
   return jsonResponse({
     success: true,
     sheets: allData,
+    lastUpdated: new Date().toISOString()
+  });
+}
+
+// ── Get SKU list from Master Sheet 2026 (for auto-suggest in app) ──
+function getSKUList() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(DEFAULT_SHEET);
+  
+  if (!sheet) {
+    return jsonResponse({ success: false, error: 'Master Sheet 2026 not found' });
+  }
+  
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  
+  if (lastRow < 2 || lastCol < 1) {
+    return jsonResponse({ success: true, skuList: [], totalItems: 0 });
+  }
+  
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+  var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  
+  // Find relevant column indices
+  var skuColIdx = headers.findIndex(function(h) { 
+    var lower = h.toLowerCase();
+    return lower === 'master sku' || lower.includes('master sku');
+  });
+  if (skuColIdx === -1) skuColIdx = headers.findIndex(function(h) { return h.toLowerCase() === 'sku'; });
+  if (skuColIdx === -1) skuColIdx = 0;
+  
+  var nameColIdx = headers.findIndex(function(h) { 
+    var lower = h.toLowerCase();
+    return lower.includes('product name') || lower === 'name' || lower === 'product';
+  });
+  
+  var eanColIdx = headers.findIndex(function(h) { 
+    var lower = h.toLowerCase();
+    return lower.includes('ean') || lower.includes('barcode');
+  });
+  
+  var categoryColIdx = headers.findIndex(function(h) { 
+    return h.toLowerCase().includes('category');
+  });
+  
+  var skuList = [];
+  
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    var sku = skuColIdx >= 0 ? String(row[skuColIdx]).trim() : '';
+    var name = nameColIdx >= 0 ? String(row[nameColIdx]).trim() : '';
+    var ean = eanColIdx >= 0 ? String(row[eanColIdx]).trim() : '';
+    var category = categoryColIdx >= 0 ? String(row[categoryColIdx]).trim() : '';
+    
+    if (!sku && !ean) continue; // Skip empty rows
+    
+    skuList.push({
+      sku: sku,
+      name: name,
+      ean: ean,
+      category: category
+    });
+  }
+  
+  return jsonResponse({
+    success: true,
+    skuList: skuList,
+    totalItems: skuList.length,
     lastUpdated: new Date().toISOString()
   });
 }
