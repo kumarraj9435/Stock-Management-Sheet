@@ -1576,6 +1576,7 @@ document.getElementById('barcode-modal').addEventListener('click', (e) => {
 
 
 // ==================== GOOGLE SHEET LIVE STOCK (UNIGEN ONLY) ====================
+// Supports ALL sheets from the spreadsheet with sheet selector
 
 /**
  * IMPORTANT: Replace this URL with your deployed Google Apps Script Web App URL
@@ -1588,6 +1589,9 @@ const LiveStock = {
     data: [],
     headers: [],
     filteredData: [],
+    allSheetsData: {},    // { sheetName: { headers, data, totalRows } }
+    sheetNames: [],       // list of all sheet names
+    currentSheet: '',     // currently selected sheet
     autoRefreshInterval: null,
     isLoading: false,
     lastSynced: null,
@@ -1620,7 +1624,7 @@ const LiveStock = {
         }
     },
 
-    // Fetch data from Google Sheet
+    // Fetch ALL sheets data from Google Sheet
     async fetchData() {
         if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
             this.showError('Google Apps Script URL not configured! Edit app.js and set GOOGLE_SCRIPT_URL.');
@@ -1632,18 +1636,26 @@ const LiveStock = {
         this.updateSyncIndicator('syncing');
 
         try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=read`);
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=readAll`);
             const result = await response.json();
 
             if (result.success) {
-                this.data = result.data || [];
-                this.headers = result.headers || [];
-                this.filteredData = [...this.data];
+                this.allSheetsData = result.sheets || {};
+                this.sheetNames = Object.keys(this.allSheetsData);
                 this.lastSynced = new Date();
-                this.renderTable();
+
+                // Render sheet selector
+                this.renderSheetSelector();
+
+                // If no current sheet selected, pick first one (prefer Master Sheet 2026)
+                if (!this.currentSheet || !this.allSheetsData[this.currentSheet]) {
+                    this.currentSheet = this.sheetNames.find(s => s.includes('Master Sheet')) || this.sheetNames[0] || '';
+                }
+
+                // Load current sheet data
+                this.loadSheetData(this.currentSheet);
                 this.updateSyncIndicator('connected');
                 this.updateLastSyncTime();
-                document.getElementById('live-stock-row-count').textContent = `${this.data.length} rows`;
             } else {
                 throw new Error(result.error || 'Unknown error');
             }
@@ -1654,6 +1666,40 @@ const LiveStock = {
         } finally {
             this.isLoading = false;
             this.updateLoadingUI(false);
+        }
+    },
+
+    // Load a specific sheet's data into the table
+    loadSheetData(sheetName) {
+        if (!sheetName || !this.allSheetsData[sheetName]) return;
+        this.currentSheet = sheetName;
+        const sheetData = this.allSheetsData[sheetName];
+        this.data = sheetData.data || [];
+        this.headers = sheetData.headers || [];
+        this.filteredData = [...this.data];
+
+        // Update sheet selector value
+        const selector = document.getElementById('live-stock-sheet-select');
+        if (selector) selector.value = sheetName;
+
+        this.renderTable();
+        document.getElementById('live-stock-row-count').textContent = `${this.data.length} rows in "${sheetName}"`;
+    },
+
+    // Render sheet selector dropdown
+    renderSheetSelector() {
+        const selector = document.getElementById('live-stock-sheet-select');
+        if (!selector) return;
+        const prevValue = selector.value;
+        selector.innerHTML = this.sheetNames.map(name => {
+            const rows = this.allSheetsData[name]?.totalRows || 0;
+            return `<option value="${name}">${name} (${rows})</option>`;
+        }).join('');
+        // Restore previous selection
+        if (prevValue && this.sheetNames.includes(prevValue)) {
+            selector.value = prevValue;
+        } else if (this.currentSheet) {
+            selector.value = this.currentSheet;
         }
     },
 
@@ -1672,6 +1718,7 @@ const LiveStock = {
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     action: 'update',
+                    sheet: this.currentSheet,
                     masterSKU: masterSKU,
                     updates: { [columnName]: newValue }
                 })
@@ -1718,6 +1765,7 @@ const LiveStock = {
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     action: 'add',
+                    sheet: this.currentSheet,
                     rowData: rowData
                 })
             });
@@ -1760,8 +1808,13 @@ const LiveStock = {
             return;
         }
 
+        // Find the best identifier column (Master SKU > SKU > EAN > first column)
+        const skuKey = this.headers.find(h => h.toLowerCase().includes('master sku'))
+            || this.headers.find(h => h.toLowerCase() === 'sku')
+            || this.headers.find(h => h.toLowerCase().includes('ean'))
+            || this.headers[0] || '';
+
         tbody.innerHTML = this.filteredData.map(row => {
-            const skuKey = this.headers.find(h => h.toLowerCase().includes('master sku')) || 'Master SKU';
             const masterSKU = row[skuKey] || '';
 
             return `<tr>${displayHeaders.map(header => {
@@ -1884,6 +1937,17 @@ const LiveStock = {
 // Refresh button
 document.getElementById('live-stock-refresh')?.addEventListener('click', () => {
     LiveStock.fetchData();
+});
+
+// Sheet selector change
+document.getElementById('live-stock-sheet-select')?.addEventListener('change', (e) => {
+    const sheetName = e.target.value;
+    if (sheetName) {
+        LiveStock.loadSheetData(sheetName);
+        // Clear search when switching sheets
+        const searchInput = document.getElementById('live-stock-search-input');
+        if (searchInput) searchInput.value = '';
+    }
 });
 
 // Search input
