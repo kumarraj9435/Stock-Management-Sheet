@@ -2103,13 +2103,48 @@ document.getElementById('add-row-cancel')?.addEventListener('click', () => {
 // Edit Cell save
 document.getElementById('edit-cell-save')?.addEventListener('click', async () => {
     if (!LiveStock._editContext) return;
-    const { sku, column } = LiveStock._editContext;
+    const { sku, column, sheet } = LiveStock._editContext;
     const newValue = document.getElementById('edit-cell-value').value;
+    const targetSheet = sheet || LiveStock.currentSheet;
 
-    const success = await LiveStock.updateCell(sku, column, newValue);
-    if (success) {
-        document.getElementById('edit-cell-modal').classList.add('hidden');
+    LiveStock.updateSyncIndicator('syncing');
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'update',
+                sheet: targetSheet,
+                masterSKU: sku,
+                updates: { [column]: newValue }
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            LiveStock.updateSyncIndicator('connected');
+            showToast(`Updated: ${column} = ${newValue}`, 'success');
+            // Refresh the relevant table
+            if (sheet && sheet !== LiveStock.currentSheet) {
+                // It's from SheetInOut sections
+                if (SheetInOut.inCurrentSheet === sheet) SheetInOut.loadSheet(sheet, 'in');
+                else if (SheetInOut.outCurrentSheet === sheet) SheetInOut.loadSheet(sheet, 'out');
+            } else {
+                // Update LiveStock local data
+                const row = LiveStock.data.find(r => {
+                    const skuKey = LiveStock.headers.find(h => h.toLowerCase().includes('master sku')) || 'Master SKU';
+                    return String(r[skuKey]).trim() === String(sku).trim();
+                });
+                if (row) row[column] = newValue;
+                LiveStock.renderTable();
+            }
+        } else {
+            throw new Error(result.error || 'Update failed');
+        }
+    } catch (error) {
+        LiveStock.updateSyncIndicator('error');
+        showToast('Update failed: ' + error.message, 'error');
     }
+    document.getElementById('edit-cell-modal').classList.add('hidden');
 });
 
 // Edit Cell cancel
@@ -2170,3 +2205,123 @@ switchTab = function(tabName) {
         }
     }
 };
+
+
+
+// ==================== GOOGLE SHEET IN/OUT SECTIONS (UNIGEN ONLY) ====================
+// Shows selected Google Sheet data in Stock In/Out tabs with bidirectional edit
+
+const SheetInOut = {
+    inData: [], inHeaders: [], inFilteredData: [], inCurrentSheet: '',
+    outData: [], outHeaders: [], outFilteredData: [], outCurrentSheet: '',
+
+    async loadSheet(sheetName, type) {
+        if (!sheetName || GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') return;
+        
+        showToast(`Loading ${sheetName}...`, 'info');
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=read&sheet=${encodeURIComponent(sheetName)}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                if (type === 'in') {
+                    this.inData = result.data || [];
+                    this.inHeaders = result.headers || [];
+                    this.inFilteredData = [...this.inData];
+                    this.inCurrentSheet = sheetName;
+                    this.renderTable('in');
+                    document.getElementById('sheet-in-count').textContent = `${this.inData.length} rows in "${sheetName}"`;
+                } else {
+                    this.outData = result.data || [];
+                    this.outHeaders = result.headers || [];
+                    this.outFilteredData = [...this.outData];
+                    this.outCurrentSheet = sheetName;
+                    this.renderTable('out');
+                    document.getElementById('sheet-out-count').textContent = `${this.outData.length} rows in "${sheetName}"`;
+                }
+                showToast(`${sheetName} loaded!`, 'success');
+            } else {
+                showToast('Error: ' + (result.error || 'Failed'), 'error');
+            }
+        } catch (err) {
+            showToast('Sheet load failed: ' + err.message, 'error');
+        }
+    },
+
+    renderTable(type) {
+        const headers = type === 'in' ? this.inHeaders : this.outHeaders;
+        const data = type === 'in' ? this.inFilteredData : this.outFilteredData;
+        const thead = document.getElementById(`sheet-${type}-thead`);
+        const tbody = document.getElementById(`sheet-${type}-tbody`);
+        if (!thead || !tbody) return;
+
+        const displayHeaders = headers.filter(h => !h.startsWith('_'));
+        thead.innerHTML = `<tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${displayHeaders.length}" style="text-align:center;color:#999;padding:20px;">No data</td></tr>`;
+            return;
+        }
+
+        // Find identifier column
+        const skuKey = headers.find(h => h.toLowerCase().includes('sku') || h.toLowerCase().includes('ean')) || headers[0] || '';
+        const currentSheet = type === 'in' ? this.inCurrentSheet : this.outCurrentSheet;
+
+        tbody.innerHTML = data.slice(0, 100).map(row => {
+            const id = row[skuKey] || '';
+            return `<tr>${displayHeaders.map(header => {
+                const value = row[header] !== undefined && row[header] !== null ? row[header] : '';
+                return `<td class="editable-cell" data-sku="${id}" data-column="${header}" data-sheet="${currentSheet}" data-type="${type}" title="Click to edit">${value}</td>`;
+            }).join('')}</tr>`;
+        }).join('');
+
+        // Click to edit
+        tbody.querySelectorAll('.editable-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const sku = cell.dataset.sku;
+                const column = cell.dataset.column;
+                const currentValue = cell.textContent;
+                document.getElementById('edit-cell-sku').textContent = sku;
+                document.getElementById('edit-cell-column').textContent = column;
+                document.getElementById('edit-cell-value').value = currentValue;
+                document.getElementById('edit-cell-modal').classList.remove('hidden');
+                LiveStock._editContext = { sku, column, sheet: cell.dataset.sheet };
+            });
+        });
+    },
+
+    filter(type, query) {
+        const data = type === 'in' ? this.inData : this.outData;
+        if (!query) {
+            if (type === 'in') this.inFilteredData = [...data];
+            else this.outFilteredData = [...data];
+        } else {
+            const q = query.toLowerCase();
+            const filtered = data.filter(row => Object.values(row).some(v => String(v).toLowerCase().includes(q)));
+            if (type === 'in') this.inFilteredData = filtered;
+            else this.outFilteredData = filtered;
+        }
+        this.renderTable(type);
+    }
+};
+
+// Sheet In selector change
+document.getElementById('sheet-in-select')?.addEventListener('change', (e) => {
+    const sheetName = e.target.value;
+    if (sheetName) SheetInOut.loadSheet(sheetName, 'in');
+});
+
+// Sheet Out selector change
+document.getElementById('sheet-out-select')?.addEventListener('change', (e) => {
+    const sheetName = e.target.value;
+    if (sheetName) SheetInOut.loadSheet(sheetName, 'out');
+});
+
+// Search filters
+document.getElementById('sheet-in-search')?.addEventListener('input', (e) => {
+    SheetInOut.filter('in', e.target.value.trim());
+});
+
+document.getElementById('sheet-out-search')?.addEventListener('input', (e) => {
+    SheetInOut.filter('out', e.target.value.trim());
+});
